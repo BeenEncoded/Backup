@@ -1,12 +1,12 @@
 import sys, os
 from UI.MainWindow import display_gui
-from filesystem.iterators import CopyIterator
+from filesystem.iterator import recursivecopy
 
 if __name__ == "__main__":
-    print("\n\n\n\nSTARTING ITERATION: \n\n\n\n")
+    print("\n\n\n\n\nSTARTING ITERATION: \n")
     p = os.path.abspath("/home/jonathan")
     count = 0
-    for entry in CopyIterator(p):
+    for entry in recursivecopy(p):
         count += 1
         if os.path.isfile(entry):
             print("File: " + entry)

@@ -2,7 +2,7 @@ import os
 
 # This is basically just a wrapper class around os.walk, but it actually
 # iterates over everything.
-class RecursiveIterator:
+class recursive:
     def __init__(self, root_path):
         self.iter = os.walk(root_path)
         self.returned_parent = False
@@ -30,9 +30,9 @@ class RecursiveIterator:
                 self.files_pos += 1
                 return s
 
-class CopyIterator:
+class recursivecopy:
     def __init__(self, root_path):
-        self.iter = RecursiveIterator(root_path)
+        self.iter = recursive(root_path)
 
     def __iter__(self):
         return self
