@@ -1,27 +1,42 @@
 import unittest, os, shutil
 from filesystem.iterator import recursive, recursivecopy, ischild, split_path
+from tqdm import tqdm
 
 class IterationTestCase(unittest.TestCase):
-    iteration_path = os.path.abspath("../../..")
+
+    @classmethod
+    def setUpClass(self):
+        self.iteration_path = os.path.abspath("../../..")
+        self.iteration_path_count = 0
+
+        self.backup_source = os.path.abspath("./test/test_source")
+        self.backup_dest = os.path.abspath("./test/test_destination")
+
+        for entry in recursive(self.iteration_path):
+            self.iteration_path_count += 1
 
     def test_recursion(self):
         count = 0
-        for entry in recursive(IterationTestCase.iteration_path):
+        print("Testing Recursion: ")
+        for entry in tqdm(recursive(self.iteration_path), total=self.iteration_path_count):
             self.assertEqual(os.path.exists(entry), True)
             count += 1
         self.assertEqual((count > 0), True)
     
     def test_split_path(self):
-        for entry in recursive(IterationTestCase.iteration_path):
+        print("Testing split_path")
+        for entry in tqdm(recursive(self.iteration_path), total=self.iteration_path_count):
             if entry != IterationTestCase.iteration_path:
-                self.assertEqual(entry, os.path.join(split_path(IterationTestCase.iteration_path, entry)[0], split_path(IterationTestCase.iteration_path, entry)[1]))
+                self.assertEqual(entry, os.path.join(split_path(self.iteration_path, entry)[0], split_path(self.iteration_path, entry)[1]))
 
     def test_ischild(self):
-        for entry in recursive(IterationTestCase.iteration_path):
-            if entry != IterationTestCase.iteration_path:
-                self.assertEqual(ischild(IterationTestCase.iteration_path, entry), True)
+        print("Testing ischild")
+        for entry in tqdm(recursive(self.iteration_path), total=self.iteration_path_count):
+            if entry != self.iteration_path:
+                self.assertEqual(ischild(self.iteration_path, entry), True)
 
     def test_recursivecopy_initialization(self):
+        print("testing recursive copy initialization")
         invalid_destinations = [os.path.abspath("../../../.."), \
                 os.path.abspath("/q\\fwef/jo\nnat hanqe/  egibweff"), os.path.abspath("../../..")]
         
@@ -80,16 +95,19 @@ class IterationTestCase(unittest.TestCase):
             self.assertTrue(False)
 
     def test__copy_fsobject(self):
-        test_backup_folder = os.path.abspath("./test_backup")
+        print("Testing _copy_fsobject")
 
+        self._mkdir(self.backup_dest)
+        self._mkdir(self.backup_source)
+        cpy = iter(recursivecopy(self.backup_source, self.backup_dest))
         try:
-            os.mkdir(test_backup_folder)
-        except FileExistsError:
-            pass
-        cpy = iter(recursivecopy(self.iteration_path, test_backup_folder))
-        try:
-            for x in range(100):
+            for x in tqdm(range(100)):
                 next(cpy)
         except StopIteration:
             pass
-        os.rmdir(test_backup_folder)
+
+    def _mkdir(self, dir):
+        try:
+            os.makedirs(dir)
+        except FileExistsError:
+            pass
