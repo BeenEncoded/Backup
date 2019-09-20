@@ -1,5 +1,5 @@
 import unittest, os, shutil
-from filesystem.iterator import recursive, recursivecopy, ischild, split_path
+from filesystem.iterator import recursive, recursivecopy, ischild, split_path, recursivecopy, copypredicate
 from tqdm import tqdm
 
 class IterationTestCase(unittest.TestCase):
@@ -123,10 +123,11 @@ class IterationTestCase(unittest.TestCase):
         print("Starting backup:")
         print("Source: " + bsource)
         print("Destination: " + bdest)
-        for results in tqdm(recursivecopy(bsource, bdest), total=count):
-            for result in results:
-                if not result[0]:
-                    recursivecopy.resultstr(result)
+        for results in tqdm(recursivecopy(bsource, bdest, copypredicate.only_if_source_changed), total=count):
+            if results is not None:
+                for result in results:
+                    if not result[0]:
+                        recursivecopy.resultstr(result)
 
     #Helper functions:
     def _mkdir(self, dir):

@@ -44,9 +44,17 @@ class recursivecopy:
 
     It is expected that if /a/b/c is copied into /z, then the result should
     be /z/c/*, where * represents the contents of /a/b/c.
+
+    An optional argument <code>predicate(str: source_path, str: source_destination)</code> can 
+    be used to define the condition under which a copy operation proceeds.
+    By applying a predicate you can do things like skip files that have not 
+    changed, or only copy a specific type of file.
+
+    Occassionally a path will be skipped.  This can happend when the predicate returns False or
+    when no destinations are specified.  In this case the iterator will return None.
     '''
 
-    def __init__(self, root_path, destination_folders):
+    def __init__(self, root_path, destination_folders, predicate=None):
         '''
         root_path: the folder you want to copy.
 
@@ -72,6 +80,7 @@ class recursivecopy:
         self._source = root_path
         self._destinations = [os.path.join(d, os.path.basename(self._source)) for d in destination_folders]
         self.iter = recursive(self._source)
+        self._predicate = predicate
 
     def __iter__(self):
         return self
@@ -84,7 +93,22 @@ class recursivecopy:
     # errors are returned as an array of exceptions
     # Returns:
     # [[bool: success, str: failure reason]]
+    # None if nothing was copied at all.  This can happen if the predicate returns false, or
+    #      No destinations are specified.
     def _copy_fsobject(self, source_path, destination_folders):
+        #first if the predicate is set, filter our destinations so that we are only going 
+        #to copy what we want.
+        if self._predicate != None:
+            tempdlist = []
+            for x in destination_folders:
+                if self._predicate(source_path, os.path.join(x, split_path(self._source, source_path)[1])):
+                    tempdlist.append(x)
+            destination_folders = tempdlist
+        
+        #return if we aren't going to copy anything.
+        if len(destination_folders) == 0:
+            return None
+
         new_dests = destination_folders
         success = False
         removeddest = False
@@ -226,6 +250,13 @@ class recursivecopy:
             else:
                 disp += (str(error[1]) + os.linesep)
         return disp
+
+class copypredicate:
+    @staticmethod
+    def only_if_source_changed(source, destination=""):
+        if os.path.exists(source) and os.path.exists(destination):
+            return os.path.getmtime(source) > os.path.getmtime(destination)
+        return True
 
 class CopyPathError(Exception):
     def __init__(self, message, errors = []):
