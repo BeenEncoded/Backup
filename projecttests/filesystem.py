@@ -3,6 +3,9 @@ from filesystem.iterator import recursive, recursivecopy, ischild, split_path
 from tqdm import tqdm
 
 class IterationTestCase(unittest.TestCase):
+    '''
+    Tests a bunch of stuff in filesystem.iterator to make sure it works.
+    '''
 
     @classmethod
     def setUpClass(self):

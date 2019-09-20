@@ -3,6 +3,10 @@ import os, shutil, io
 # This is basically just a wrapper class around os.walk, but it actually
 # iterates over everything.
 class recursive:
+    '''
+    A recursive directory iterator, the first element of which is the root_path
+    being iterated over.
+    '''
     def __init__(self, root_path):
         self.iter = os.walk(root_path)
         self.returned_parent = False
@@ -31,7 +35,24 @@ class recursive:
                 return s
 
 class recursivecopy:
+    '''
+    A recursive directory iterator that also copies the elements being iterated.
+    It returns a [[bool: success, str: failure_reason]] upon __next__(), which represents
+    an array of results.  These results correspond to each copy operation, since
+    recursivecopy can also copy to multiple destinations.  When copying to
+    multiple destinations recursivecopy only reads the source a single time.
+
+    It is expected that if /a/b/c is copied into /z, then the result should
+    be /z/c/*, where * represents the contents of /a/b/c.
+    '''
+
     def __init__(self, root_path, destination_folders):
+        '''
+        root_path: the folder you want to copy.
+
+        destination_folders: a list of folders (or a string representing the 
+        path to a single destination)
+        '''
         if (root_path is None) or (destination_folders is None):
             raise AttributeError("recursivecopy: invalid arguments")
         if (os.path.isdir(root_path) == False):
@@ -43,11 +64,11 @@ class recursivecopy:
         if isinstance(destination_folders, list):
             for path in destination_folders:
                 if os.path.isdir(path) == False:
-                    raise NotADirectoryError("recursivecopy: one of the destination folders passed to the \
-iterator is not a valid folder!")
+                    raise NotADirectoryError("""recursivecopy: one of the destination folders passed to the 
+                    iterator is not a valid folder!""")
                 if path == root_path:
-                    raise shutil.SameFileError("recursivecopy: one of the  \
-destinations given is the same as the source.")
+                    raise shutil.SameFileError("""recursivecopy: one of the 
+                    destinations given is the same as the source.""")
         self._source = root_path
         self._destinations = [os.path.join(d, os.path.basename(self._source)) for d in destination_folders]
         self.iter = recursive(self._source)
