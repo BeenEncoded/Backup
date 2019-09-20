@@ -1,4 +1,4 @@
-import os, shutil
+import os, shutil, io
 
 # This is basically just a wrapper class around os.walk, but it actually
 # iterates over everything.
@@ -59,17 +59,147 @@ destinations given is the same as the source.")
         self.current = next(self.iter)
         return self._copy_fsobject(self.current, self._destinations)
     
+    # copies a filesystem object
+    # errors are returned as an array of exceptions
+    # Returns:
+    # [[bool: success, str: failure reason]]
     def _copy_fsobject(self, source_path, destination_folders):
         new_dests = destination_folders
+        success = False
+        removeddest = False
+        operation_results = []
+        number_of_copied_paths = 0
+
         if source_path != self._source:
             new_dests = [os.path.join(d, split_path(self._source, source_path)[1]) for d in destination_folders]
-        if os.path.isdir(source_path):
-            pass
-        elif os.path.isfile(source_path):
-            pass
+        if os.path.isdir(source_path) or os.path.isfile(source_path):
+
+            # Removing the destination targets if they exist.
+            for destination in new_dests:
+                if os.path.exists(destination):
+                    if os.path.isfile(destination):
+                        os.remove(destination)
+                        removeddest = (os.path.exists(destination) == False)
+                    elif os.path.isdir(destination):
+                        if os.listdir(destination) == []:
+                            os.rmdir(destination)
+                            removeddest = (os.path.exists(destination) == False)
+                    else:
+                        operation_results.append(CopyPathError(r"""_copy_fsobject: on attempt of removing a destination
+                        target path, I could not determine if it was a folder or a file.""", 
+                        errors=[self._source, source_path, destination]))
+                        continue
+            if os.path.isfile(source_path):
+                results = self._copy_file(source_path, new_dests)
+                for r in results:
+                    if r[0] == False:
+                        operation_results.append([False, [IncompleteCopyError("Incomplete copy operation", r[1])]])
+            if os.path.isdir(source_path):
+                r = self._copy_folder(source_path, new_dests)
+                for result in r:
+                    if not result[0]:
+                        operation_results.append([False, [CopyFolderError("Unable to copy folder!", [result[1]])]])
         else:
-            pass
-        return self.current
+            operation_results.append(r"""Could not copy path because it was not a file or a folder!""", [self._source, source_path])
+        return operation_results
+    
+    #Copies a file from source, to destination.
+    #If the file exists at the destination it is overwritten.
+    #
+    # Returns: an array containing [bool: success, str: failure reason] that is the length
+    # of the number of destinations.  Each element represents one of the copy operations 
+    # that took place.
+    def _copy_file(self, source, destinations=[]):
+        if (source is None) or (destinations is None):
+            return [[False, "one of the arguments to the function is None!"]]
+        if (isinstance(destinations, list) == False) and (isinstance(destinations, str) == False):
+            return [[False, "destinations argument is not a list or a string!"]]
+        if os.path.isfile(source) == False:
+            return [[False, "The source path argument is not a file!"]]
+        for destination in destinations:
+            if os.path.basename(source) != os.path.basename(destination):
+                return [[False, ("The path arguments don't look right...  Here they are: \n" + source + "\n" + destination)]]
+        if destinations is str:
+            destinations = [destinations]
+        
+        #create results to store the results of the operation and 
+        #initialize it to nothing.
+        results = []
+        for x in range(0, len(destinations)):
+            results.append([False, "Nothing has been done yet."])
+
+        #perform the copy operation.
+        with open(source, 'rb') as sourcefile:
+            #here we have a list of destination streams:
+            dest_files = []
+            for destination in destinations:
+                dest_files.append(open(destination, 'wb'))
+            
+            while True:
+                #read once from the source, and write that data to each destination stream.
+                #this should ease the stress of the operation on the drive.
+                data = sourcefile.read()
+                if len(data) == 0:
+                    break  # <-- at EOF
+
+                #Attempt to write the read data to each target destination:
+                for x in range(0, len(dest_files)):
+                    if dest_files[x].write(data) == len(data):
+                        results[x][0] = True
+                        results[x][1] = "A write operation succeeded."
+                    else:
+                        results[x][0] = False
+                        results[x][1] = ("Failed to write all the data to the destination file: " + destinations[x])
+            
+            #the write operations are complete.  Close all the destination
+            # streams:
+            for f in dest_files:
+                f.close()
+            
+            #cleanup results information:
+            for result in results:
+                if result[0] == True:
+                    result[1] = ""
+        #now we need to copy over all the attributes:
+        for x in range(0, len(destinations)):
+            if os.path.isfile(destinations[x]):
+                shutil.copystat(source, destinations[x])
+        return results
+    
+    def _copy_folder(self, source, destinations=[]):
+        results = []
+        for x in range(0, len(destinations)):
+            results.append([False, "Nothing was done."])
+        if isinstance(destinations, str):
+            destinations = [destinations]
+        for x in range(0, len(destinations)):
+            if destinations[x] != source:
+                if not os.path.exists(destinations[x]):
+                    os.mkdir(destinations[x])
+                results[x][0] = os.path.exists(destinations[x])
+                if results[x][0]:
+                    shutil.copystat(source, destinations[x], follow_symlinks=False)
+                    results[x][1] = ""
+                else:
+                    results[x][1] = "Could not mkdir!"
+            else:
+                results[x] = [False, "Destination is the source!"]
+        return results
+
+class CopyPathError(Exception):
+    def __init__(self, message, errors = []):
+        super(CopyPathError, self).__init__(message)
+        self.errors = errors
+
+class IncompleteCopyError(Exception):
+    def __init__(self, message, errors):
+        super(IncompleteCopyError, self).__init__(message)
+        self.errors = errors
+
+class CopyFolderError(Exception):
+    def __init__(self, message, errors):
+        super(CopyFolderError, self).__init__(message)
+        self.errors = errors
 
 # /c/abc
 # /c/abc/abc1/bac3

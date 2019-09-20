@@ -19,7 +19,6 @@ class IterationTestCase(unittest.TestCase):
         count = 0
         print("Testing Recursion: ")
         for entry in tqdm(recursive(self.iteration_path), total=self.iteration_path_count):
-            self.assertEqual(os.path.exists(entry), True)
             count += 1
         self.assertEqual((count > 0), True)
     
@@ -99,13 +98,19 @@ class IterationTestCase(unittest.TestCase):
 
         self._mkdir(self.backup_dest)
         self._mkdir(self.backup_source)
-        cpy = iter(recursivecopy(self.backup_source, self.backup_dest))
-        try:
-            for x in tqdm(range(100)):
-                next(cpy)
-        except StopIteration:
-            pass
+        count = 0
+        for entry in recursive(self.backup_source):
+            count += 1
+        for result in tqdm(recursivecopy(self.backup_source, self.backup_dest), total=count):
+            if len(result) > 1:
+                print("Copy fail!")
+                print(result[1].message)
+                print(result[1].errors)
 
+                self.assertTrue(False)
+        shutil.rmtree(self.backup_dest)
+
+    #Helper functions:
     def _mkdir(self, dir):
         try:
             os.makedirs(dir)
