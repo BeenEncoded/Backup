@@ -113,6 +113,21 @@ class IterationTestCase(unittest.TestCase):
                 self.assertTrue(False)
         shutil.rmtree(self.backup_dest)
 
+    def test_backup_potential(self):
+        bsource = os.path.expanduser("/home/jonathan")
+        bdest = os.path.abspath("/media/jonathan/Extra Storage")
+        count = 0
+        print("Loading...")
+        for entry in tqdm(recursive(bsource)):
+            count += 1
+        print("Starting backup:")
+        print("Source: " + bsource)
+        print("Destination: " + bdest)
+        for results in tqdm(recursivecopy(bsource, bdest), total=count):
+            for result in results:
+                if not result[0]:
+                    recursivecopy.resultstr(result)
+
     #Helper functions:
     def _mkdir(self, dir):
         try:

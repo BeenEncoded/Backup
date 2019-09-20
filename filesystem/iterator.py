@@ -37,7 +37,7 @@ class recursive:
 class recursivecopy:
     '''
     A recursive directory iterator that also copies the elements being iterated.
-    It returns a [[bool: success, str: failure_reason]] upon __next__(), which represents
+    It returns a [[bool: success, any_type: failure_reason]] upon __next__(), which represents
     an array of results.  These results correspond to each copy operation, since
     recursivecopy can also copy to multiple destinations.  When copying to
     multiple destinations recursivecopy only reads the source a single time.
@@ -121,7 +121,7 @@ class recursivecopy:
                     if not result[0]:
                         operation_results.append([False, [CopyFolderError("Unable to copy folder!", [result[1]])]])
         else:
-            operation_results.append(r"""Could not copy path because it was not a file or a folder!""", [self._source, source_path])
+            operation_results.append([False, [r"""Could not copy path because it was not a file or a folder!""", self._source, source_path]])
         return operation_results
     
     #Copies a file from source, to destination.
@@ -206,6 +206,26 @@ class recursivecopy:
             else:
                 results[x] = [False, "Destination is the source!"]
         return results
+
+    @staticmethod
+    def resultstr(error):
+        '''
+        Takes a result from an iteration and formats it for 
+        nice display.  Returns a string that can be printed.
+        '''
+        disp = ""
+        if error[0]:
+            disp += "Copy success.\n"
+        else:
+            disp += ("Copy failed!" + os.linesep)
+            if isinstance(error[1], list):
+                for element in error:
+                    disp += (str(element) + os.linesep)
+            elif isinstance(error[1], Exception):
+                disp += (str(error[1]) + os.linesep + "Errors:  " + str([err for err in error[1].errors]) + os.linesep)
+            else:
+                disp += (str(error[1]) + os.linesep)
+        return disp
 
 class CopyPathError(Exception):
     def __init__(self, message, errors = []):
