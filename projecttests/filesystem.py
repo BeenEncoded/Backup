@@ -123,7 +123,7 @@ class IterationTestCase(unittest.TestCase):
         print("Starting backup:")
         print("Source: " + bsource)
         print("Destination: " + bdest)
-        for results in tqdm(recursivecopy(bsource, bdest, copypredicate.only_if_source_changed), total=count):
+        for results in tqdm(recursivecopy(bsource, bdest, copypredicate.if_source_was_modified_more_recently), total=count):
             if results is not None:
                 for result in results:
                     if not result[0]:

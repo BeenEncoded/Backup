@@ -1,5 +1,7 @@
 import os, shutil, io
 
+from errors import *
+
 # This is basically just a wrapper class around os.walk, but it actually
 # iterates over everything.
 class recursive:
@@ -253,25 +255,10 @@ class recursivecopy:
 
 class copypredicate:
     @staticmethod
-    def only_if_source_changed(source, destination=""):
+    def if_source_was_modified_more_recently(source, destination=""):
         if os.path.exists(source) and os.path.exists(destination):
             return os.path.getmtime(source) > os.path.getmtime(destination)
         return True
-
-class CopyPathError(Exception):
-    def __init__(self, message, errors = []):
-        super(CopyPathError, self).__init__(message)
-        self.errors = errors
-
-class IncompleteCopyError(Exception):
-    def __init__(self, message, errors):
-        super(IncompleteCopyError, self).__init__(message)
-        self.errors = errors
-
-class CopyFolderError(Exception):
-    def __init__(self, message, errors):
-        super(CopyFolderError, self).__init__(message)
-        self.errors = errors
 
 # /c/abc
 # /c/abc/abc1/bac3
