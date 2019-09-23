@@ -2,7 +2,8 @@ import os
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
 
-from data import BackupProfile, config
+from data import BackupProfile
+from globaldata import *
 
 class EditBackupProfileWidget(QWidget):
     def __init__(self, parent):
@@ -11,7 +12,7 @@ class EditBackupProfileWidget(QWidget):
     
     def _init_layout(self):
         mainlayout = QVBoxLayout()
-        label = QLabel(config['DEFAULT']['profilepath'])
+        label = QLabel("Hello World!")
         label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
 
         mainlayout.addWidget(label)
