@@ -20,7 +20,7 @@ def addDataTestCase(suite):
 
 def defaultTests():
     suite = unittest.TestSuite()
-    # addIterationTestCase(suite)
+    addIterationTestCase(suite)
     addDataTestCase(suite)
     return suite
 
