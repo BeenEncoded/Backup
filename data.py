@@ -1,8 +1,24 @@
-import json
+import json, os, configparser
 
 from errors import *
 
-class BackupProfile:
+#TODO: fix this... thing
+config = configparser.ConfigParser()
+config['DEFAULT'] = {
+    "profilepath": os.path.abspath("./")
+}
+config['BackupBehavior'] = {}
+
+#here we make sure that we search for a config file, and 
+#if none is loaded we write it.
+if len(config.read(["backup.conf"])) == 0:
+    with open("backup.conf", "w") as config_file:
+        print("Writing default configuration, none was found!")
+        config.write(config_file)
+else:
+    print("Successfully loaded configuration!")
+
+class BackupProfile():
     '''
     ## Backup profile:
         string name
@@ -12,10 +28,21 @@ class BackupProfile:
     ## Serialization:
         A static methods are provided to convert the object from and to a json.
     '''
-    def __init__(self):
-        self._name = ""
-        self._sources = []
-        self._destinations = []
+    def __init__(self, dictionary=None):
+        '''
+        Passing a dictionary initializes a BackupProfile using a dictionary {"names": ..., "sources": ..., "destinations":...}
+        This is primarily useful for loading from the json serialization.
+        '''
+        super(BackupProfile, self).__init__()
+
+        if dictionary is None:
+            self._name = ""
+            self._sources = []
+            self._destinations = []
+        else:
+            self._name = dictionary["name"]
+            self._sources = dictionary["sources"]
+            self._destinations = dictionary["destinations"]
 
     def __eq__(self, other):
         if not isinstance(other, BackupProfile):
@@ -49,9 +76,19 @@ class BackupProfile:
         self._destinations = value
     
     @staticmethod
-    def json(profiles):
+    def writejson(profiles, file):
         '''
-        json(list[BackupProfile] profiles)
+        tojson(list[BackupProfile] profiles, TextIOBase file)
+        returns the json string nicely formatted.
         '''
-        return json.dumps([{"name": p.getName(), "sources": p.getSources(), "destinations": p.getDestinations()} for p in profiles], \
-            indent=4, sort_keys=True)
+        return json.dump([{"name": p.getName(), "sources": p.getSources(), "destinations": p.getDestinations()} for p in profiles], \
+            fp=file, indent=4, sort_keys=True)
+    
+    @staticmethod
+    def readjson(file):
+        '''
+        fromjson(string rawjson)
+        returns a list[BackupProfile]
+        '''
+        x = json.load(file)
+        return [BackupProfile(entry) for entry in x]
