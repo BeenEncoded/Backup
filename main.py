@@ -1,6 +1,5 @@
-import sys, os
+import sys
 from UI.MainWindow import display_gui
-from filesystem.iterator import recursive, recursivecopy, split_path, ischild
 
 if __name__ == "__main__":
     sys.exit(display_gui(sys.argv))
