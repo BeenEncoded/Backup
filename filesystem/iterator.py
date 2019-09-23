@@ -91,6 +91,9 @@ class recursivecopy:
         self.current = next(self.iter)
         return self._copy_fsobject(self.current, self._destinations)
     
+    def getCurrentPath(self):
+        return self.current
+
     # copies a filesystem object
     # errors are returned as an array of exceptions
     # Returns:
