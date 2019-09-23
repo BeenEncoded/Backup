@@ -5,7 +5,11 @@ from data import BackupProfile
 
 def onexit():
     global CONFIG
+    global BACKUPS
     CONFIG.save()
+
+    with open(CONFIG.getConfig()['DEFAULT']['profilepath'], 'w') as bfile:
+        BackupProfile.writejson(BACKUPS, bfile)
 
 def load_backups():
     global BACKUPS

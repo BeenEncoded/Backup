@@ -2,3 +2,4 @@ __pycache__
 launch.json
 test/*
 backup.conf
+backup_profiles.json
