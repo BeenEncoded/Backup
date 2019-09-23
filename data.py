@@ -2,21 +2,43 @@ import json, os, configparser
 
 from errors import *
 
-#TODO: fix this... thing
-config = configparser.ConfigParser()
-config['DEFAULT'] = {
-    "profilepath": os.path.abspath("./")
-}
-config['BackupBehavior'] = {}
+class Configuration:
+    '''
+    This helps to centralize all code relating to saving, storing, getting, and 
+    initializing global program configuration.
+    '''
+    def __init__(self):
+        super(Configuration, self).__init__()
 
-#here we make sure that we search for a config file, and 
-#if none is loaded we write it.
-if len(config.read(["backup.conf"])) == 0:
-    with open("backup.conf", "w") as config_file:
-        print("Writing default configuration, none was found!")
-        config.write(config_file)
-else:
-    print("Successfully loaded configuration!")
+        #set up the configuration, initializing it with some sane defaults
+        self._config = self._default_config()
+
+        #here we make sure that we search for a config file, and 
+        #if none is loaded we write it.
+        if len(self._config.read(["backup.conf"])) == 0:
+            self.save()
+    
+    #This function returns a default configuration.
+    def _default_config(self):
+        '''
+        Returns the a default configuration for the entire program.
+        '''
+        c = configparser.ConfigParser()
+
+        c['DEFAULT'] = {
+            "profilepath": os.path.abspath("./backup_profiles.json")
+        }
+
+        c['BackupBehavior'] = {}
+
+        return c
+
+    def getConfig(self):
+        return self._config
+    
+    def save(self):
+        with open("backup.conf", 'w') as config_file:
+            self._config.write(config_file)
 
 class BackupProfile():
     '''
