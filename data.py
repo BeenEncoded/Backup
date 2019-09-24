@@ -29,6 +29,11 @@ class Configuration:
             "profilepath": os.path.abspath("./backup_profiles.json")
         }
 
+        c['ui'] = {
+            "font_size": 12,
+            "font": "monospaced"
+        }
+
         c['BackupBehavior'] = {}
 
         return c
@@ -46,13 +51,15 @@ class BackupProfile():
         string name
         list[string] sources
         list[string] destinations
+        int ID
     
     ## Serialization:
         A static methods are provided to convert the object from and to a json.
     '''
     def __init__(self, dictionary=None):
         '''
-        Passing a dictionary initializes a BackupProfile using a dictionary {"names": ..., "sources": ..., "destinations":...}
+        Passing a dictionary initializes a BackupProfile using a dictionary 
+        {"names": ..., "sources": ..., "destinations":...,"ID": ...}
         This is primarily useful for loading from the json serialization.
         '''
         super(BackupProfile, self).__init__()
@@ -61,15 +68,18 @@ class BackupProfile():
             self._name = ""
             self._sources = []
             self._destinations = []
+            self._ID = 0
         else:
             self._name = dictionary["name"]
             self._sources = dictionary["sources"]
             self._destinations = dictionary["destinations"]
+            self._ID = dictionary["id"]
 
     def __eq__(self, other):
         if not isinstance(other, BackupProfile):
             return False
-        return ((self._sources == other._sources) and (self._destinations == other._destinations))
+        return ((self._sources == other._sources) and (self._destinations == other._destinations) and \
+        (self._name == other._name) and (self._ID == other._ID))
     
     def __str__(self):
         return """
@@ -97,20 +107,33 @@ class BackupProfile():
     def setDestinations(self, value):
         self._destinations = value
     
+    def getID(self):
+        return self._ID
+    
+    def setID(self, newid):
+        self._ID = newid
+
+    def assignID(self, profiles):
+        ids = [e.getID() for e in profiles]
+        self._ID = 0
+        while self._ID in ids:
+            self._ID += 1
+    
     @staticmethod
     def writejson(profiles, file):
         '''
         tojson(list[BackupProfile] profiles, TextIOBase file)
         returns the json string nicely formatted.
         '''
-        return json.dump([{"name": p.getName(), "sources": p.getSources(), "destinations": p.getDestinations()} for p in profiles], \
+        return json.dump(\
+        [{"name": p.getName(), "sources": p.getSources(), "destinations": p.getDestinations(), "id": p.getID()} for p in profiles], \
             fp=file, indent=4, sort_keys=True)
     
     @staticmethod
     def readjson(file):
         '''
         fromjson(string rawjson)
-        returns a list[BackupProfile]
-        '''
-        x = json.load(file)
+        returns a list[BackupProfile]        
+        '''        
+        x = json.load(file)        
         return [BackupProfile(entry) for entry in x]
