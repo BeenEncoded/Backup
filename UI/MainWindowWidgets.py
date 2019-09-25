@@ -11,7 +11,7 @@ class EditBackupProfileWidget(QWidget):
         self._init_layout()
     
     def _init_layout(self):
-        self.setWindowTitle("Edit Backup")
+        self.parent().setWindowTitle("Edit Backup")
         mainlayout = QVBoxLayout()
 
         # A labeled text box:
@@ -53,5 +53,15 @@ class EditBackupProfileWidget(QWidget):
         dests_gbox_layout.addLayout(dbuttons_layout)
         self.destinations_groupbox.setLayout(dests_gbox_layout)
         mainlayout.addWidget(self.destinations_groupbox)
+
+        # Buttons to save or completely delete the backup profile
+        finalbuttons_layout = QHBoxLayout()
+        self.finish_editing_button = QPushButton()
+        self.delete_profile_button = QPushButton()
+        self.finish_editing_button.setText("Finish Editing")
+        self.delete_profile_button.setText("Delete Profile")
+        finalbuttons_layout.addWidget(self.finish_editing_button)
+        finalbuttons_layout.addWidget(self.delete_profile_button)
+        mainlayout.addLayout(finalbuttons_layout)
 
         self.setLayout(mainlayout)
