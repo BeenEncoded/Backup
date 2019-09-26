@@ -210,8 +210,21 @@ class ExecuteBackupProfileWidget(QWidget):
         global PDATA
 
         super(ExecuteBackupProfileWidget, self).__init__(parent)
+        self.parent().statusBar().showMessage("Loading Program Data...")
         PDATA.load()
+        self.parent().statusBar().showMessage("Program Data Loaded.", 5000)
+        self._profiles = PDATA.getProfiles()
+        self._init_layout()
     
     def _init_layout(self):
         mainlayout = QVBoxLayout()
+
+        dropdownbox_layout = QHBoxLayout()
+        self.backup_combobox = QComboBox()
+        backuplist_label = QLabel("Select a Backup: ")
+        self.backup_combobox.addItems([p.getName() for p in self._profiles])
+        dropdownbox_layout.addWidget(backuplist_label)
+        dropdownbox_layout.addWidget(self.backup_combobox)
+        mainlayout.addLayout(dropdownbox_layout)
+
         self.setLayout(mainlayout)
