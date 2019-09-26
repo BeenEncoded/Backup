@@ -8,8 +8,11 @@ from globaldata import *
 class MainWindow(QMainWindow):
     def __init__(self, parent):
         super(MainWindow, self).__init__(parent)
+        self.statusBar().setEnabled(True)
+        
         self.setCentralWidget(ExecuteBackupProfileWidget(self))
         self._apply_configuration()
+        self.show()
     
     def _apply_configuration(self):
         '''
@@ -23,5 +26,4 @@ class MainWindow(QMainWindow):
 def display_gui(argv):
     app = QApplication(argv)
     window = MainWindow(None)
-    window.show()
     return app.exec()
