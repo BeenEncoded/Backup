@@ -115,14 +115,17 @@ class IterationTestCase(unittest.TestCase):
 
     def test_backup_potential(self):
         bsource = os.path.expanduser("/home/jonathan")
-        bdest = os.path.abspath("/media/jonathan/Extra Storage")
+        bdest = [
+            os.path.abspath("/media/jonathan/Extra Storage/testbackup"),
+            os.path.abspath("/media/jonathan/PortBackupDrive/testbackup")
+        ]
         count = 0
         print("Loading...")
         for entry in tqdm(recursive(bsource)):
             count += 1
         print("Starting backup:")
         print("Source: " + bsource)
-        print("Destination: " + bdest)
+        print("Destination: " + str(bdest))
         for results in tqdm(recursivecopy(bsource, bdest, copypredicate.if_source_was_modified_more_recently), total=count):
             if results is not None:
                 for result in results:
