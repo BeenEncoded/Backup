@@ -59,14 +59,14 @@ class ProgramData:
     def load(self):
         self._load_profiles()
 
-        print("Loaded")
-        print(str([str(b) for b in self.getProfiles()]))
+        # print("Loaded")
+        # print(str([str(b) for b in self.getProfiles()]))
 
     def save(self):
         self._save_profiles()
 
-        print("Saved")
-        print(str([str(b) for b in self.getProfiles()]))
+        # print("Saved")
+        # print(str([str(b) for b in self.getProfiles()]))
 
     def _load_profiles(self):
         self._profiles.clear()
