@@ -48,9 +48,9 @@ class Configuration:
 class ProgramData:
     '''
     Stores and manages all global program data aside from configuration.
-    It requires the program configuration to save an load.
+    It requires the program configuration to save and load.
     It does not load anything on construction.  This is to allow wiping the program
-    data without deleting any files.
+    data without deleting any files by simple assignment.
     '''
     def __init__(self, configuration):
         self._profiles = []
