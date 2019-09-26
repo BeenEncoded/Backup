@@ -259,7 +259,7 @@ class recursivecopy:
 class copypredicate:
     @staticmethod
     def if_source_was_modified_more_recently(source, destination=""):
-        if os.path.exists(source) and os.path.exists(destination):
+        if os.path.exists(destination):
             return os.path.getmtime(source) > os.path.getmtime(destination)
         return True
 
