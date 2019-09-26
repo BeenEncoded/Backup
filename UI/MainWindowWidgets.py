@@ -208,3 +208,4 @@ class EditBackupProfileWidget(QWidget):
 class ExecuteBackupProfileWidget(QWidget):
     def __init__(self, parent):
         super(ExecuteBackupProfileWidget, self).__init__(parent)
+        PDATA.load()

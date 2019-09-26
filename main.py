@@ -10,11 +10,6 @@ def onexit():
     CONFIG.save()
     PDATA.save()
 
-def load_globals():
-    global PDATA
-    PDATA.load()
-
 if __name__ == "__main__":
-    load_globals()
     atexit.register(onexit)
     sys.exit(display_gui(sys.argv))

@@ -2,13 +2,13 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
-from UI.MainWindowWidgets import EditBackupProfileWidget
+from UI.MainWindowWidgets import EditBackupProfileWidget, ExecuteBackupProfileWidget
 from globaldata import *
 
 class MainWindow(QMainWindow):
     def __init__(self, parent):
         super(MainWindow, self).__init__(parent)
-        self.setCentralWidget(EditBackupProfileWidget(self, -1))
+        self.setCentralWidget(ExecuteBackupProfileWidget(self))
         self._apply_configuration()
     
     def _apply_configuration(self):

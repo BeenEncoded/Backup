@@ -59,8 +59,14 @@ class ProgramData:
     def load(self):
         self._load_profiles()
 
+        print("Loaded")
+        print(str([str(b) for b in self.getProfiles()]))
+
     def save(self):
         self._save_profiles()
+
+        print("Saved")
+        print(str([str(b) for b in self.getProfiles()]))
 
     def _load_profiles(self):
         self._profiles.clear()
@@ -112,10 +118,9 @@ class BackupProfile:
         (self._name == other._name) and (self._ID == other._ID))
     
     def __str__(self):
-        return """
-        Name: """ + self._name + """\n
-        Sources: """ + str(self._sources) + """\n
-        Destinations: """ + str(self._destinations) + "\n"
+        return "Name: " + self._name + \
+        "      Sources: " + str(self._sources) + \
+        "      Destinations: " + str(self._destinations)
 
     def setName(self, name):
         if not isinstance(name, str):
