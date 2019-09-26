@@ -45,7 +45,37 @@ class Configuration:
         with open("backup.conf", 'w') as config_file:
             self._config.write(config_file)
 
-class BackupProfile():
+class ProgramData:
+    '''
+    Stores and manages all global program data aside from configuration.
+    It requires the program configuration to save an load.
+    It does not load anything on construction.  This is to allow wiping the program
+    data without deleting any files.
+    '''
+    def __init__(self, configuration):
+        self._profiles = []
+        self._config = configuration
+    
+    def load(self):
+        self._load_profiles()
+
+    def save(self):
+        self._save_profiles()
+
+    def _load_profiles(self):
+        self._profiles.clear()
+        self._profiles = BackupProfile.readjson(self._config['DEFAULT']['profilepath'])
+    
+    def _save_profiles(self):
+        BackupProfile.writejson(self._profiles, self._config['DEFAULT']['profilepath'])
+
+    def setProfiles(self, value):
+        self._profiles = value
+    
+    def getProfiles(self):
+        return self._profiles
+
+class BackupProfile:
     '''
     ## Backup profile:
         string name
@@ -120,20 +150,37 @@ class BackupProfile():
             self._ID += 1
     
     @staticmethod
-    def writejson(profiles, file):
+    def getById(profiles, id):
         '''
-        tojson(list[BackupProfile] profiles, TextIOBase file)
-        returns the json string nicely formatted.
+        Returns the profile with the matching ID, or None if no profile
+        or multiple profiles with the same ID was found.
         '''
-        return json.dump(\
-        [{"name": p.getName(), "sources": p.getSources(), "destinations": p.getDestinations(), "id": p.getID()} for p in profiles], \
-            fp=file, indent=4, sort_keys=True)
+        matches = [p for p in profiles if p.getID() == id]
+        if len(matches) == 0:
+            return None
+        elif len(matches) == 1:
+            return matches[0]
+        return None
+
+    @staticmethod
+    def writejson(profiles, filename):
+        '''
+        tojson(list[BackupProfile] profiles, string file)
+        Writes a list of BackupProfile to a filename
+        '''
+        with open(filename, 'w') as file:
+            return json.dump(\
+            [{"name": p.getName(), "sources": p.getSources(), "destinations": p.getDestinations(), "id": p.getID()} for p in profiles], \
+                fp=file, indent=4, sort_keys=True)
     
     @staticmethod
-    def readjson(file):
+    def readjson(filename):
         '''
         fromjson(string rawjson)
         returns a list[BackupProfile]        
-        '''        
-        x = json.load(file)        
-        return [BackupProfile(entry) for entry in x]
+        '''
+        if os.path.isfile(filename):
+            with open(filename, 'r') as file:
+                x = json.load(file)
+                return [BackupProfile(entry) for entry in x]
+        raise FileNotFoundError("Tried to open " + filename + " to load backups from and couldn't find the file.")

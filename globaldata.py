@@ -1,5 +1,5 @@
-from data import Configuration
+from data import Configuration, ProgramData
 
 #This file contains globals
 CONFIG = Configuration()
-BACKUPS = []
+PDATA = ProgramData(CONFIG.getConfig())

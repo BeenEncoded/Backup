@@ -23,10 +23,7 @@ class DataTestCase(unittest.TestCase):
             for i in range(0, 10):
                 random_stuff.append(randomBackupProfile())
             
-            with open(filename, 'w', encoding='utf-8') as file:
-                BackupProfile.writejson(random_stuff, file)
-            loaded = None
-            with open(filename, 'r', encoding='utf-8') as file:
-                loaded = BackupProfile.readjson(file)
+            BackupProfile.writejson(random_stuff, filename)
+            loaded = BackupProfile.readjson(filename)
             self.assertTrue(loaded == random_stuff)
         os.remove(filename)

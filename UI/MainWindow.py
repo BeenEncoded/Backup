@@ -8,7 +8,7 @@ from globaldata import *
 class MainWindow(QMainWindow):
     def __init__(self, parent):
         super(MainWindow, self).__init__(parent)
-        self.setCentralWidget(EditBackupProfileWidget(self))
+        self.setCentralWidget(EditBackupProfileWidget(self, -1))
         self._apply_configuration()
     
     def _apply_configuration(self):
