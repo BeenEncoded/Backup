@@ -1,6 +1,6 @@
 import os
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QFont
 
 from data import BackupProfile
@@ -8,7 +8,7 @@ from globaldata import *
 from errors import BackupProfileNotFoundError
 
 class EditBackupProfileWidget(QWidget):
-    def __init__(self, parent, profile_id):
+    def __init__(self, par, profile_id):
         '''
         Initializes this window to edit a backup profile.  Make sure that an
         ID
@@ -16,7 +16,7 @@ class EditBackupProfileWidget(QWidget):
         global PDATA
         PDATA.load() #reload program data
 
-        super(EditBackupProfileWidget, self).__init__(parent)
+        super(EditBackupProfileWidget, self).__init__(par)
         profiles = PDATA.getProfiles()
         if profile_id > -1:
             self._profile = BackupProfile.getById(profiles, profile_id)
@@ -74,13 +74,15 @@ class EditBackupProfileWidget(QWidget):
         self.destinations_groupbox.setLayout(dests_gbox_layout)
         mainlayout.addWidget(self.destinations_groupbox)
 
-        # Buttons to save or completely delete the backup profile
+        # Buttons to save, delete, and cancel the backup profile
         finalbuttons_layout = QHBoxLayout()
         self.finish_editing_button = QPushButton()
         self.delete_profile_button = QPushButton()
+        self.cancel_edit_button = QPushButton("Cancel")
         self.finish_editing_button.setText("Finish Editing")
         self.delete_profile_button.setText("Delete Profile")
         finalbuttons_layout.addWidget(self.finish_editing_button)
+        finalbuttons_layout.addWidget(self.cancel_edit_button)
         finalbuttons_layout.addWidget(self.delete_profile_button)
         mainlayout.addLayout(finalbuttons_layout)
 
@@ -100,6 +102,7 @@ class EditBackupProfileWidget(QWidget):
         self.destinations_del_button.clicked.connect(self._delete_selected_destination)
         self.name_tbox.textChanged.connect(self._set_profile_name)
         self.finish_editing_button.clicked.connect(self._finish_editing_profile)
+        self.cancel_edit_button.clicked.connect(self._cancel_edit)
         self.delete_profile_button.clicked.connect(self._delete_backup_profile)
 
         #listbox: these signals are used to update whether buttons are enabled.
@@ -163,7 +166,6 @@ class EditBackupProfileWidget(QWidget):
     def _finish_editing_profile(self):
         global PDATA
         profiles = PDATA.getProfiles()
-        print("finished editing clicked")
         backupfilename = CONFIG.getConfig()['DEFAULT']['profilepath']
         if BackupProfile.getById(profiles, self._profile.getID()) is not None:
             for x in range(0, len(profiles)):
@@ -179,6 +181,9 @@ class EditBackupProfileWidget(QWidget):
             PDATA.setProfiles(profiles)
             PDATA.save()
             self.parent().setCentralWidget(ExecuteBackupProfileWidget(self.parent()))
+
+    def _cancel_edit(self):
+        self.parent().setCentralWidget(ExecuteBackupProfileWidget(self.parent()))
 
     def _set_enabled_buttons(self):
         global PDATA
@@ -214,17 +219,38 @@ class ExecuteBackupProfileWidget(QWidget):
         PDATA.load()
         self.parent().statusBar().showMessage("Program Data Loaded.", 5000)
         self._profiles = PDATA.getProfiles()
+
         self._init_layout()
+        self._connect_handlers()
     
     def _init_layout(self):
         mainlayout = QVBoxLayout()
 
+        self.newbackup_button = QPushButton("New Backup")
+        mainlayout.addWidget(self.newbackup_button)
+
+        # A labeled dropdown showing all the user's backups.  An edit button 
+        # is next to it to allow editing the selected backup too.
         dropdownbox_layout = QHBoxLayout()
         self.backup_combobox = QComboBox()
+        self.editbackup_button = QPushButton("<- Edit")
         backuplist_label = QLabel("Select a Backup: ")
         self.backup_combobox.addItems([p.getName() for p in self._profiles])
         dropdownbox_layout.addWidget(backuplist_label)
         dropdownbox_layout.addWidget(self.backup_combobox)
+        dropdownbox_layout.addWidget(self.editbackup_button)
         mainlayout.addLayout(dropdownbox_layout)
 
         self.setLayout(mainlayout)
+
+    def _connect_handlers(self):
+        self.newbackup_button.clicked.connect(self._new_backup)
+        self.editbackup_button.clicked.connect(self._edit_selected_backup)
+    
+    def _new_backup(self):
+        self.parent().setCentralWidget(EditBackupProfileWidget(self.parent(), -1))
+    
+    def _edit_selected_backup(self):
+        i = self.backup_combobox.currentIndex()
+        if i < len(self._profiles):
+            self.parent().setCentralWidget(EditBackupProfileWidget(self.parent(), self._profiles[i].getID()))
