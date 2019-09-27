@@ -4,7 +4,7 @@ from globaldata import *
 from data import BackupProfile
 
 def onexit():
-    print("Cleaning up globals...")
+    print("Saving everything...")
     global CONFIG
     global PDATA
     CONFIG.save()
