@@ -71,6 +71,8 @@ class ProgramData:
     def _load_profiles(self):
         self._profiles.clear()
         self._profiles = BackupProfile.readjson(self._config['DEFAULT']['profilepath'])
+        #now we re-assign the ids because the json could have been edited by the luser...
+        BackupProfile.reassignAllIds(self._profiles)
     
     def _save_profiles(self):
         BackupProfile.writejson(self._profiles, self._config['DEFAULT']['profilepath'])
@@ -166,6 +168,13 @@ class BackupProfile:
         elif len(matches) == 1:
             return matches[0]
         return None
+
+    @staticmethod
+    def reassignAllIds(profiles):
+        for p in profiles:
+            p.setID(-1)
+        for p in profiles:
+            p.assignID(profiles)
 
     @staticmethod
     def writejson(profiles, filename):

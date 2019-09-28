@@ -222,6 +222,7 @@ class ManageBackupsWidget(QWidget):
 
         self._init_layout()
         self._connect_handlers()
+        self._set_enabled_buttons()
     
     def _init_layout(self):
         mainlayout = QVBoxLayout()
@@ -242,6 +243,9 @@ class ManageBackupsWidget(QWidget):
         mainlayout.addLayout(dropdownbox_layout)
 
         self.setLayout(mainlayout)
+
+    def _set_enabled_buttons(self):
+        self.editbackup_button.setEnabled(len(self._profiles) > 0)
 
     def _connect_handlers(self):
         self.newbackup_button.clicked.connect(self._new_backup)
