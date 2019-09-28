@@ -158,10 +158,10 @@ class EditBackupProfileWidget(QWidget):
                     profiles.pop(x)
                     PDATA.setProfiles(profiles)
                     PDATA.save()
-                    self.parent().setCentralWidget(ExecuteBackupProfileWidget(self.parent()))
+                    self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
                     break
         else:
-            self.parent().setCentralWidget(ExecuteBackupProfileWidget(self.parent()))
+            self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
     
     def _finish_editing_profile(self):
         global PDATA
@@ -173,17 +173,17 @@ class EditBackupProfileWidget(QWidget):
                     profiles[x] = self._profile
                     PDATA.setProfiles(profiles)
                     PDATA.save()
-                    self.parent().setCentralWidget(ExecuteBackupProfileWidget(self.parent()))
+                    self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
                     break
         else:
             self._profile.assignID(profiles)
             profiles.append(self._profile)
             PDATA.setProfiles(profiles)
             PDATA.save()
-            self.parent().setCentralWidget(ExecuteBackupProfileWidget(self.parent()))
+            self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
 
     def _cancel_edit(self):
-        self.parent().setCentralWidget(ExecuteBackupProfileWidget(self.parent()))
+        self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
 
     def _set_enabled_buttons(self):
         global PDATA
@@ -210,11 +210,11 @@ class EditBackupProfileWidget(QWidget):
                 if entry not in ob:
                     ob.append(entry)
 
-class ExecuteBackupProfileWidget(QWidget):
+class ManageBackupsWidget(QWidget):
     def __init__(self, parent):
         global PDATA
 
-        super(ExecuteBackupProfileWidget, self).__init__(parent)
+        super(ManageBackupsWidget, self).__init__(parent)
         self.parent().statusBar().showMessage("Loading Program Data...")
         PDATA.load()
         self.parent().statusBar().showMessage("Program Data Loaded.", 5000)

@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
-from UI.MainWindowWidgets import EditBackupProfileWidget, ExecuteBackupProfileWidget
+from UI.MainWindowWidgets import EditBackupProfileWidget, ManageBackupsWidget
 from globaldata import *
 
 class MainWindow(QMainWindow):
@@ -10,7 +10,7 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__(parent)
         self.statusBar().setEnabled(True)
         
-        self.setCentralWidget(ExecuteBackupProfileWidget(self))
+        self.setCentralWidget(ManageBackupsWidget(self))
         self._apply_configuration()
         self.show()
     
