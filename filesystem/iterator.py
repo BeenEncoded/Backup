@@ -94,6 +94,7 @@ class recursivecopy:
     def getCurrentPath(self):
         return self.current
 
+    # TODO: redefine how errors are returned
     # copies a filesystem object
     # errors are returned as an array of exceptions
     # Returns:
