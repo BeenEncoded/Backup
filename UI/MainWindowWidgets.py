@@ -186,8 +186,6 @@ class EditBackupProfileWidget(QWidget):
         self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
 
     def _set_enabled_buttons(self):
-        global PDATA
-
         self.sources_del_button.setEnabled(len(self.sources_listbox.selectedItems()) > 0)
         self.destinations_del_button.setEnabled(len(self.destinations_listbox.selectedItems()) > 0)
         self.delete_profile_button.setEnabled(BackupProfile.getById(PDATA.getProfiles(), self._profile.getID()) is not None)
@@ -258,3 +256,7 @@ class ManageBackupsWidget(QWidget):
         i = self.backup_combobox.currentIndex()
         if i < len(self._profiles):
             self.parent().setCentralWidget(EditBackupProfileWidget(self.parent(), self._profiles[i].getID()))
+
+class ExecuteBackupWidget(QWidget):
+    def __init__(self, parent, backup):
+        super(ExecuteBackupWidget, self).__init__(parent)
