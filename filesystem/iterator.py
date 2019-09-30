@@ -226,26 +226,6 @@ class recursivecopy:
             else:
                 results[x] = [False, recursivecopy.WrongArgumentValueError("Destination is the source!", argvalue=destinations[x], expectedvalue=("Anything but " + source))]
         return results
-
-    @staticmethod
-    def resultstr(error):
-        '''
-        Takes a result from an iteration and formats it for 
-        nice display.  Returns a string that can be printed.
-        '''
-        disp = ""
-        if error[0]:
-            disp += "Copy success.\n"
-        else:
-            disp += ("Copy failed!" + os.linesep)
-            if isinstance(error[1], list):
-                for element in error:
-                    disp += (str(element) + os.linesep)
-            elif isinstance(error[1], Exception):
-                disp += (str(error[1]) + os.linesep + "Errors:  " + str([err for err in error[1].errors]) + os.linesep)
-            else:
-                disp += (str(error[1]) + os.linesep)
-        return disp
     
     class UnexpectedError:
         '''
