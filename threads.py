@@ -22,7 +22,7 @@ class BackupThread(threading.Thread):
     qcom = QtComObject()
 
     def run(self):
-        self._init_vars()
+        self.stop = False
         l = threading.local()
         l.source = self.backup["source"]
         l.destinations = self.backup["destinations"]
@@ -36,24 +36,21 @@ class BackupThread(threading.Thread):
         
         l.status.message = "Copying..."
         l.status.percent = 0.0
-        iterator = iter(recursivecopy(l.source, l.destinations))
-        while True:
+        iterator = iter(recursivecopy(l.source, l.destinations, predicate=copypredicate.if_source_was_modified_more_recently))
+        while True and not self.stop:
             try:
                 errors = next(iterator)
             except StopIteration:
                 break
-            for error in errors:
-                self.showError(error)
+            if errors is not None:
+                for error in errors:
+                    self.showError(error)
             l.sources_copied += 1
             l.status.message = iterator.current
             l.status.percent = ((l.sources_copied * 100) / l.sources_count)
             self.updateProgress(l.status)
         self.raiseFinished()
         return
-
-    def _init_vars(self):
-        if not hasattr(self, "backup"):
-            self.backup = {"source": None, "destinations": []}
     
     def updateProgress(self, status):
         '''

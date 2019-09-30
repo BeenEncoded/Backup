@@ -313,6 +313,10 @@ class ExecuteBackupWidget(QWidget):
         gbox.setLayout(gbox_layout)
         mainlayout.addWidget(gbox)
 
+        #Cancel button
+        self.cancel_button = QPushButton("Cancel")
+        mainlayout.addWidget(self.cancel_button)
+
         #some settings:
         self.errors_textedit.setReadOnly(True)
 
@@ -322,18 +326,29 @@ class ExecuteBackupWidget(QWidget):
         for e in self.executions:
             e.backupthread.qcom.show_error.connect(self._show_execution_error)
             e.removeself.connect(self._remove_completed)
+        self.cancel_button.clicked.connect(self._cancel_backups)
     
     @pyqtSlot(recursivecopy.UnexpectedError)
     def _show_execution_error(self, error):
         self.errors_textedit.appendPlainText(str(error))
 
     @pyqtSlot()
+    def _cancel_backups(self):
+        for e in self.executions:
+            e.stopExecution()
+            while e.backupthread.is_alive():
+                pass
+        self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
+
+    @pyqtSlot()
     def _remove_completed(self):
-        while len([e.completed for e in self.executions if e.complete]) > 0:
+        while len([e.complete for e in self.executions if e.complete]) > 0:
             for x in range(0, len(self.executions)):
-                if self.executions[x].completed:
+                if self.executions[x].complete:
                     self.executions.pop(x)
                     break
+        if len(self.executions) == 0:
+            self.cancel_button.setText("Back")
 
 class QBackupExecution(QWidget):
     removeself = pyqtSignal()
@@ -372,6 +387,10 @@ class QBackupExecution(QWidget):
 
     def startExecution(self):
         self.backupthread.start()
+
+    def stopExecution(self):
+        self.backupthread.stop = True
+        self.backupthread.join()
 
     @pyqtSlot(ProcessStatus)
     def _update_progress(self, status):
