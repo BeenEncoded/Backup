@@ -64,9 +64,15 @@ class BackupThread(threading.Thread):
             self.data.backup = BackupProfile()
             self.data.progress_id = 0 #referrs to the progress bar that this process is associated with.
     
-    def setBackup(self, b):
+    @property
+    def backup(self):
         self._init_vars()
-        self.data.backup = b
+        return self.data.backup
+
+    @backup.setter
+    def backup(self, value):
+        self._init_vars()
+        self.data.backup = value
 
     def setProgressID(self, id):
         self._init_vars()
