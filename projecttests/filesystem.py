@@ -114,10 +114,10 @@ class IterationTestCase(unittest.TestCase):
         shutil.rmtree(self.backup_dest)
 
     def test_backup_potential(self):
-        bsource = os.path.expanduser("/home/jonathan")
+        bsource = os.path.abspath("D:\\beene")
         bdest = [
-            os.path.abspath("/media/jonathan/Extra Storage/testbackup"),
-            os.path.abspath("/media/jonathan/PortBackupDrive/testbackup")
+            os.path.abspath("E:\\testbackup"),
+            os.path.abspath("F:\\testbackup")
         ]
         count = 0
         print("Loading...")
@@ -129,8 +129,7 @@ class IterationTestCase(unittest.TestCase):
         for results in tqdm(recursivecopy(bsource, bdest, copypredicate.if_source_was_modified_more_recently), total=count):
             if results is not None:
                 for result in results:
-                    if not result[0]:
-                        recursivecopy.resultstr(result)
+                    print("Error: " + str(result))
 
     #Helper functions:
     def _mkdir(self, dir):
