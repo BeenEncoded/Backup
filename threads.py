@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QObject
 from PyQt5.QtGui import QFont
 
 from data import BackupProfile
@@ -14,15 +14,18 @@ class ProcessStatus:
         self.percent = percent_complete
 
 class BackupThread(threading.Thread):
-    progress_update = pyqtSignal(ProcessStatus)
-    show_error = pyqtSignal(recursivecopy.UnexpectedError)
-    exec_finished = pyqtSignal()
+    class QtComObject(QObject):
+        progress_update = pyqtSignal(ProcessStatus)
+        show_error = pyqtSignal(recursivecopy.UnexpectedError)
+        exec_finished = pyqtSignal()
+    
+    qcom = QtComObject()
 
     def run(self):
         self._init_vars()
         l = threading.local()
         l.source = self.backup["source"]
-        l.destinations = self.data.backup["destinations"]
+        l.destinations = self.backup["destinations"]
         l.sources_count = 0
         l.sources_copied = 0
         l.status = ProcessStatus(0.0, "Counting stuff...")
@@ -33,47 +36,36 @@ class BackupThread(threading.Thread):
         
         l.status.message = "Copying..."
         l.status.percent = 0.0
-        for errors in recursivecopy(l.source, l.destinations):
+        iterator = iter(recursivecopy(l.source, l.destinations))
+        while True:
+            try:
+                errors = next(iterator)
+            except StopIteration:
+                break
             for error in errors:
-                if not error[0]:
-                    self.showError(error[1])
+                self.showError(error)
             l.sources_copied += 1
+            l.status.message = iterator.current
             l.status.percent = ((l.sources_copied * 100) / l.sources_count)
             self.updateProgress(l.status)
         self.raiseFinished()
         return
 
     def _init_vars(self):
-        if not hasattr(self, "data"):
-            self.data = threading.local()
-            self.data.backup = {"source": None, "destinations": []}
+        if not hasattr(self, "backup"):
+            self.backup = {"source": None, "destinations": []}
     
-    @property
-    def backup(self):
-        '''
-        Thread-local property representing the backup
-        It should be a dictionary with the following elements:
-        {"source": source, "destinations": []}
-        '''
-        self._init_vars()
-        return self.data.backup
-
-    @backup.setter
-    def backup(self, value):
-        self._init_vars()
-        self.data.backup = value
-
     def updateProgress(self, status):
         '''
         ##pyqtSignal: Emits a signal to update progress of the backup's process.
         '''
-        self.progress_update.emit(status)
+        self.qcom.progress_update.emit(status)
     
     def raiseFinished(self):
-        self.exec_finished.emit()
+        self.qcom.exec_finished.emit()
 
     def showError(self, error):
         '''
         pyqtSignal: Shows an exception to the user. 
         '''
-        self.show_error.emit(error)
+        self.qcom.show_error.emit(error)
