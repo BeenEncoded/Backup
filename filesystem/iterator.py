@@ -94,11 +94,10 @@ class recursivecopy:
     def getCurrentPath(self):
         return self.current
 
-    # TODO: redefine how errors are returned
     # copies a filesystem object
     # errors are returned as an array of exceptions
     # Returns:
-    # [[bool: success, str: failure reason]]
+    # [UnexpectedError]
     # None if nothing was copied at all.  This can happen if the predicate returns false, or
     #      No destinations are specified.
     def _copy_fsobject(self, source_path, destination_folders):
@@ -136,48 +135,43 @@ class recursivecopy:
                             os.rmdir(destination)
                             removeddest = (os.path.exists(destination) == False)
                     else:
-                        operation_results.append(CopyPathError(r"""_copy_fsobject: on attempt of removing a destination
-                        target path, I could not determine if it was a folder or a file.""", 
-                        errors=[self._source, source_path, destination]))
+                        operation_results.append(PathNotWorkingError(message=r"""_copy_fsobject: on attempt of removing a destination
+                        target path, I could not determine if it was a folder or a file.""", path=destination))
                         continue
             if os.path.isfile(source_path):
                 results = self._copy_file(source_path, new_dests)
                 for r in results:
-                    if r[0] == False:
-                        operation_results.append([False, [IncompleteCopyError("Incomplete copy operation", r[1])]])
+                    if not r[0]:
+                        operation_results.append(r[1])
             if os.path.isdir(source_path):
                 r = self._copy_folder(source_path, new_dests)
                 for result in r:
                     if not result[0]:
-                        operation_results.append([False, [CopyFolderError("Unable to copy folder!", [result[1]])]])
+                        operation_results.append(result[1])
         else:
-            operation_results.append([False, [r"""Could not copy path because it was not a file or a folder!""", self._source, source_path]])
+            operation_results.append(PathNotWorkingError("Could not copy path because it was not a file or a folder!",  path=source_path))
         return operation_results
     
     #Copies a file from source, to destination.
     #If the file exists at the destination it is overwritten.
     #
-    # Returns: an array containing [bool: success, str: failure reason] that is the length
+    # Returns: an array containing [bool: success, recursivecopy.UnexpectedError: error data] that is the length
     # of the number of destinations.  Each element represents one of the copy operations 
     # that took place.
     def _copy_file(self, source, destinations=[]):
-        if (source is None) or (destinations is None):
-            return [[False, "one of the arguments to the function is None!"]]
-        if (isinstance(destinations, list) == False) and (isinstance(destinations, str) == False):
-            return [[False, "destinations argument is not a list or a string!"]]
-        if os.path.isfile(source) == False:
-            return [[False, "The source path argument is not a file!"]]
+        if isinstance(destinations, str):
+            destinations = [destinations]
+        if not os.path.isfile(source):
+            return [[False, PathNotWorkingError("The source path argument is not a file!", source)]]
         for destination in destinations:
             if os.path.basename(source) != os.path.basename(destination):
-                return [[False, ("The path arguments don't look right...  Here they are: \n" + source + "\n" + destination)]]
-        if destinations is str:
-            destinations = [destinations]
+                return [[False, PathNotWorkingError(("The path arguments don't look right...  Here they are: \n" + source + "\n" + destination), destination)]]
         
         #create results to store the results of the operation and 
         #initialize it to nothing.
         results = []
         for x in range(0, len(destinations)):
-            results.append([False, "Nothing has been done yet."])
+            results.append([False, NothingWasDoneError()])
 
         #perform the copy operation.
         with open(source, 'rb') as sourcefile:
@@ -197,20 +191,18 @@ class recursivecopy:
                 for x in range(0, len(dest_files)):
                     if dest_files[x].write(data) == len(data):
                         results[x][0] = True
-                        results[x][1] = "A write operation succeeded."
+                        results[x][1] = None
                     else:
                         results[x][0] = False
-                        results[x][1] = ("Failed to write all the data to the destination file: " + destinations[x])
+                        results[x][1] = PathOperationFailedError("Failed to write all the data to the destination file!", path=destinations[x])
             
             #the write operations are complete.  Close all the destination
             # streams:
             for f in dest_files:
                 f.close()
-            
-            #cleanup results information:
-            for result in results:
-                if result[0] == True:
-                    result[1] = ""
+            for x in range(0, len(dest_files)):
+                del dest_files[x]
+        
         #now we need to copy over all the attributes:
         for x in range(0, len(destinations)):
             if os.path.isfile(destinations[x]):
@@ -220,7 +212,7 @@ class recursivecopy:
     def _copy_folder(self, source, destinations=[]):
         results = []
         for x in range(0, len(destinations)):
-            results.append([False, "Nothing was done."])
+            results.append([False, NothingWasDoneError()])
         if isinstance(destinations, str):
             destinations = [destinations]
         for x in range(0, len(destinations)):
@@ -230,11 +222,11 @@ class recursivecopy:
                 results[x][0] = os.path.exists(destinations[x])
                 if results[x][0]:
                     shutil.copystat(source, destinations[x], follow_symlinks=False)
-                    results[x][1] = ""
+                    results[x][1] = None
                 else:
-                    results[x][1] = "Could not mkdir!"
+                    results[x][1] = PathOperationFailedError(message="Could not mkdir!", path=destinations[x])
             else:
-                results[x] = [False, "Destination is the source!"]
+                results[x] = [False, WrongArgumentValueError("Destination is the source!", argvalue=destinations[x], expectedvalue=("Anything but " + source))]
         return results
 
     @staticmethod
@@ -256,6 +248,60 @@ class recursivecopy:
             else:
                 disp += (str(error[1]) + os.linesep)
         return disp
+    
+    class UnexpectedError:
+        '''
+        An unexpected error...  This is no an exception class.  It represents data returned after an operation
+        fails with unexpected results.
+        '''
+        def __init__(self, message="No message set.", exception=None):
+            self.message = message
+            self.exception = exception
+
+    class PathNotWorkingError(UnexpectedError):
+        '''
+        This error refers to whenever a path registers as not existing, or not referring to
+        an expected object (for instance, it's not a folder even though it was expected to be)
+        '''
+        def __init__(self, message="No message set", path=""):
+            super(PathNotWorkingError, self).__init__(message, None)
+            self.path = path
+        
+        def __str__(self):
+            return self.message + os.linesep + "Path: " + self.path
+
+    class PathOperationFailedError(UnexpectedError):
+        def __init__(self, message="No Message Set", exception=None, path=None):
+            super(PathOperationFailedError, self).__init__(message, exception)
+            self.path=path
+        
+        def __str__(self):
+            return self.message + os.linesep + self.path + os.linesep + str(self.exception)
+
+    class WrongArgumentTypeError(UnexpectedError):
+        def __init__(self, message="No message set.", argtype=type(None), expectedtype=type(None)):
+            super(WrongArgumentTypeError, self).__init__(message, None)
+            self.argument_type = argtype
+            self.expected_type = expectedtype
+        
+        def __str__(self):
+                return self.message + os.linesep + "Expected type " + str(self.expected_type) + " but instead got " + str(self.argument_type)
+
+    class WrongArgumentValueError(UnexpectedError):
+        def __init__(self, message, argvalue=None, expectedvalue=None):
+            super(WrongArgumentValueError, self).__init__(message, None)
+            self.argument = argvalue
+            self.expected_argument = expectedvalue
+
+        def __str__(self):
+                return self.message + os.linesep + "Expected " + str(self.argument) + " but got " + str(self.expected_argument)
+
+    class NothingWasDoneError(UnexpectedError):
+        def __init__(self):
+            super(NothingWasDoneError, self).__init__("Nothing was done.", None)
+        
+        def __str__(self):
+                return self.message
 
 class copypredicate:
     @staticmethod
