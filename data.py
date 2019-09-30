@@ -40,7 +40,7 @@ class Configuration:
 
     def save(self):
         with open("backup.conf", 'w') as config_file:
-            self._config.write(config_file)
+            self.config.write(config_file)
 
 class ProgramData:
     '''
@@ -50,35 +50,29 @@ class ProgramData:
     data without deleting any files by simple assignment.
     '''
     def __init__(self, configuration):
-        self._profiles = []
+        self.profiles = []
         self._config = configuration
     
     def load(self):
         self._load_profiles()
 
         # print("Loaded")
-        # print(str([str(b) for b in self.getProfiles()]))
+        # print(str([str(b) for b in self.profiles]))
 
     def save(self):
         self._save_profiles()
 
         # print("Saved")
-        # print(str([str(b) for b in self.getProfiles()]))
+        # print(str([str(b) for b in self.profiles]))
 
     def _load_profiles(self):
-        self._profiles.clear()
-        self._profiles = BackupProfile.readjson(self._config['DEFAULT']['profilepath'])
+        self.profiles.clear()
+        self.profiles = BackupProfile.readjson(self._config['DEFAULT']['profilepath'])
         #now we re-assign the ids because the json could have been edited by the luser...
-        BackupProfile.reassignAllIds(self._profiles)
+        BackupProfile.reassignAllIds(self.profiles)
     
     def _save_profiles(self):
-        BackupProfile.writejson(self._profiles, self._config['DEFAULT']['profilepath'])
-
-    def setProfiles(self, value):
-        self._profiles = value
-    
-    def getProfiles(self):
-        return self._profiles
+        BackupProfile.writejson(self.profiles, self._config['DEFAULT']['profilepath'])
 
 class BackupProfile:
     '''

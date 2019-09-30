@@ -17,7 +17,7 @@ class EditBackupProfileWidget(QWidget):
         PDATA.load() #reload program data
 
         super(EditBackupProfileWidget, self).__init__(par)
-        profiles = PDATA.getProfiles()
+        profiles = PDATA.profiles
         if profile_id > -1:
             self._profile = BackupProfile.getById(profiles, profile_id)
             if self._profile is None:
@@ -138,7 +138,7 @@ class EditBackupProfileWidget(QWidget):
         self._apply_profile_to_fields()
     
     def _set_profile_name(self):
-        self._profile.setName(self.name_tbox.text())
+        self._profile.name = self.name_tbox.text()
 
     def _delete_selected_source(self):
         self._remove_selected_item_from_list(self.sources_listbox, self._profile.getSources())
@@ -150,13 +150,13 @@ class EditBackupProfileWidget(QWidget):
     
     def _delete_backup_profile(self):
         global PDATA
-        profiles = PDATA.getProfiles()
+        profiles = PDATA.profiles
         print("delete profile clicked")
         if BackupProfile.getById(profiles, self._profile.ID) is not None:
             for x in range(0, len(profiles)):
                 if profiles[x].ID == self._profile.ID:
                     profiles.pop(x)
-                    PDATA.setProfiles(profiles)
+                    PDATA.profiles = profiles
                     PDATA.save()
                     self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
                     break
@@ -165,20 +165,20 @@ class EditBackupProfileWidget(QWidget):
     
     def _finish_editing_profile(self):
         global PDATA
-        profiles = PDATA.getProfiles()
+        profiles = PDATA.profiles
         backupfilename = CONFIG.config['DEFAULT']['profilepath']
         if BackupProfile.getById(profiles, self._profile.ID) is not None:
             for x in range(0, len(profiles)):
                 if profiles[x].ID == self._profile.ID:
                     profiles[x] = self._profile
-                    PDATA.setProfiles(profiles)
+                    PDATA.profiles = profiles
                     PDATA.save()
                     self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
                     break
         else:
             self._profile.assignID(profiles)
             profiles.append(self._profile)
-            PDATA.setProfiles(profiles)
+            PDATA.profiles = profiles
             PDATA.save()
             self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
 
@@ -188,7 +188,7 @@ class EditBackupProfileWidget(QWidget):
     def _set_enabled_buttons(self):
         self.sources_del_button.setEnabled(len(self.sources_listbox.selectedItems()) > 0)
         self.destinations_del_button.setEnabled(len(self.destinations_listbox.selectedItems()) > 0)
-        self.delete_profile_button.setEnabled(BackupProfile.getById(PDATA.getProfiles(), self._profile.ID) is not None)
+        self.delete_profile_button.setEnabled(BackupProfile.getById(PDATA.profiles, self._profile.ID) is not None)
 
     def _remove_selected_item_from_list(self, listwidget, listob):
         '''
@@ -216,7 +216,7 @@ class ManageBackupsWidget(QWidget):
         self.parent().statusBar().showMessage("Loading Program Data...")
         PDATA.load()
         self.parent().statusBar().showMessage("Program Data Loaded.", 5000)
-        self._profiles = PDATA.getProfiles()
+        self._profiles = PDATA.profiles
 
         self._init_layout()
         self._connect_handlers()
