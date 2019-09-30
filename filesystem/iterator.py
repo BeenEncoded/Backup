@@ -135,7 +135,7 @@ class recursivecopy:
                             os.rmdir(destination)
                             removeddest = (os.path.exists(destination) == False)
                     else:
-                        operation_results.append(PathNotWorkingError(message=r"""_copy_fsobject: on attempt of removing a destination
+                        operation_results.append(recursivecopy.PathNotWorkingError(message=r"""_copy_fsobject: on attempt of removing a destination
                         target path, I could not determine if it was a folder or a file.""", path=destination))
                         continue
             if os.path.isfile(source_path):
@@ -149,7 +149,7 @@ class recursivecopy:
                     if not result[0]:
                         operation_results.append(result[1])
         else:
-            operation_results.append(PathNotWorkingError("Could not copy path because it was not a file or a folder!",  path=source_path))
+            operation_results.append(recursivecopy.PathNotWorkingError("Could not copy path because it was not a file or a folder!",  path=source_path))
         return operation_results
     
     #Copies a file from source, to destination.
@@ -171,7 +171,7 @@ class recursivecopy:
         #initialize it to nothing.
         results = []
         for x in range(0, len(destinations)):
-            results.append([False, NothingWasDoneError()])
+            results.append([False, recursivecopy.NothingWasDoneError()])
 
         #perform the copy operation.
         with open(source, 'rb') as sourcefile:
@@ -194,14 +194,12 @@ class recursivecopy:
                         results[x][1] = None
                     else:
                         results[x][0] = False
-                        results[x][1] = PathOperationFailedError("Failed to write all the data to the destination file!", path=destinations[x])
+                        results[x][1] = recursivecopy.PathOperationFailedError("Failed to write all the data to the destination file!", path=destinations[x])
             
             #the write operations are complete.  Close all the destination
             # streams:
             for f in dest_files:
                 f.close()
-            for x in range(0, len(dest_files)):
-                del dest_files[x]
         
         #now we need to copy over all the attributes:
         for x in range(0, len(destinations)):
@@ -212,7 +210,7 @@ class recursivecopy:
     def _copy_folder(self, source, destinations=[]):
         results = []
         for x in range(0, len(destinations)):
-            results.append([False, NothingWasDoneError()])
+            results.append([False, recursivecopy.NothingWasDoneError()])
         if isinstance(destinations, str):
             destinations = [destinations]
         for x in range(0, len(destinations)):
@@ -224,9 +222,9 @@ class recursivecopy:
                     shutil.copystat(source, destinations[x], follow_symlinks=False)
                     results[x][1] = None
                 else:
-                    results[x][1] = PathOperationFailedError(message="Could not mkdir!", path=destinations[x])
+                    results[x][1] = recursivecopy.PathOperationFailedError(message="Could not mkdir!", path=destinations[x])
             else:
-                results[x] = [False, WrongArgumentValueError("Destination is the source!", argvalue=destinations[x], expectedvalue=("Anything but " + source))]
+                results[x] = [False, recursivecopy.WrongArgumentValueError("Destination is the source!", argvalue=destinations[x], expectedvalue=("Anything but " + source))]
         return results
 
     @staticmethod
@@ -264,7 +262,7 @@ class recursivecopy:
         an expected object (for instance, it's not a folder even though it was expected to be)
         '''
         def __init__(self, message="No message set", path=""):
-            super(PathNotWorkingError, self).__init__(message, None)
+            super(recursivecopy.PathNotWorkingError, self).__init__(message, None)
             self.path = path
         
         def __str__(self):
@@ -272,7 +270,7 @@ class recursivecopy:
 
     class PathOperationFailedError(UnexpectedError):
         def __init__(self, message="No Message Set", exception=None, path=None):
-            super(PathOperationFailedError, self).__init__(message, exception)
+            super(recursivecopy.PathOperationFailedError, self).__init__(message, exception)
             self.path=path
         
         def __str__(self):
@@ -280,7 +278,7 @@ class recursivecopy:
 
     class WrongArgumentTypeError(UnexpectedError):
         def __init__(self, message="No message set.", argtype=type(None), expectedtype=type(None)):
-            super(WrongArgumentTypeError, self).__init__(message, None)
+            super(recursivecopy.WrongArgumentTypeError, self).__init__(message, None)
             self.argument_type = argtype
             self.expected_type = expectedtype
         
@@ -289,7 +287,7 @@ class recursivecopy:
 
     class WrongArgumentValueError(UnexpectedError):
         def __init__(self, message, argvalue=None, expectedvalue=None):
-            super(WrongArgumentValueError, self).__init__(message, None)
+            super(recursivecopy.WrongArgumentValueError, self).__init__(message, None)
             self.argument = argvalue
             self.expected_argument = expectedvalue
 
@@ -298,7 +296,7 @@ class recursivecopy:
 
     class NothingWasDoneError(UnexpectedError):
         def __init__(self):
-            super(NothingWasDoneError, self).__init__("Nothing was done.", None)
+            super(recursivecopy.NothingWasDoneError, self).__init__("Nothing was done.", None)
         
         def __str__(self):
                 return self.message
