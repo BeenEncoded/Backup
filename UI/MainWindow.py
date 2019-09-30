@@ -18,7 +18,7 @@ class MainWindow(QMainWindow):
         '''
         Applies the program's configuration to the UI.
         '''
-        uiconfig = CONFIG.getConfig()['ui']
+        uiconfig = CONFIG.config['ui']
 
         self.setFont(QFont(str(uiconfig['font']), int(uiconfig['font_size'])))
 

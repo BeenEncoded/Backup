@@ -11,11 +11,11 @@ class Configuration:
         super(Configuration, self).__init__()
 
         #set up the configuration, initializing it with some sane defaults
-        self._config = self._default_config()
+        self.config = self._default_config()
 
         #here we make sure that we search for a config file, and 
         #if none is loaded we write it.
-        if len(self._config.read(["backup.conf"])) == 0:
+        if len(self.config.read(["backup.conf"])) == 0:
             self.save()
     
     #This function returns a default configuration.
@@ -38,9 +38,6 @@ class Configuration:
 
         return c
 
-    def getConfig(self):
-        return self._config
-    
     def save(self):
         with open("backup.conf", 'w') as config_file:
             self._config.write(config_file)

@@ -115,7 +115,7 @@ class EditBackupProfileWidget(QWidget):
 
     def _directory_dialog(self, title="Select a Directory"):
         global CONFIG
-        uiconfig = CONFIG.getConfig()['ui']
+        uiconfig = CONFIG.config['ui']
         fdiag = QFileDialog(parent=self, caption=title)
         fdiag.setFileMode(QFileDialog.DirectoryOnly)
         fdiag.setDirectory(os.path.abspath("/"))
@@ -166,7 +166,7 @@ class EditBackupProfileWidget(QWidget):
     def _finish_editing_profile(self):
         global PDATA
         profiles = PDATA.getProfiles()
-        backupfilename = CONFIG.getConfig()['DEFAULT']['profilepath']
+        backupfilename = CONFIG.config['DEFAULT']['profilepath']
         if BackupProfile.getById(profiles, self._profile.getID()) is not None:
             for x in range(0, len(profiles)):
                 if profiles[x].getID() == self._profile.getID():
@@ -240,23 +240,38 @@ class ManageBackupsWidget(QWidget):
         dropdownbox_layout.addWidget(self.editbackup_button)
         mainlayout.addLayout(dropdownbox_layout)
 
+        self.executebackup_button = QPushButton("Execute Selected Backup")
+        mainlayout.addWidget(self.executebackup_button)
+
         self.setLayout(mainlayout)
 
     def _set_enabled_buttons(self):
         self.editbackup_button.setEnabled(len(self._profiles) > 0)
+        self.executebackup_button.setEnabled((self.backup_combobox.currentIndex() >= 0) and (self.backup_combobox.currentIndex() < len(self._profiles)))
 
     def _connect_handlers(self):
         self.newbackup_button.clicked.connect(self._new_backup)
         self.editbackup_button.clicked.connect(self._edit_selected_backup)
+        self.executebackup_button.clicked.connect(self._execute_backup)
     
     def _new_backup(self):
         self.parent().setCentralWidget(EditBackupProfileWidget(self.parent(), -1))
     
+    def _execute_backup(self):
+        i = self.backup_combobox.currentIndex()
+        if i < 0:
+            return
+        if i < len(self._profiles):
+            self.parent().setCentralWidget(ExecuteBackupWidget(self.parent(), self._profiles[i]))
+
     def _edit_selected_backup(self):
         i = self.backup_combobox.currentIndex()
+        if i < 0:
+            return
         if i < len(self._profiles):
             self.parent().setCentralWidget(EditBackupProfileWidget(self.parent(), self._profiles[i].getID()))
 
 class ExecuteBackupWidget(QWidget):
     def __init__(self, parent, backup):
         super(ExecuteBackupWidget, self).__init__(parent)
+        self.parent().statusBar().showMessage("Execute: " + backup.getName(), 3000)
