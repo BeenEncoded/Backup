@@ -1,11 +1,12 @@
-import os
+import os, queue
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtCore import Qt, QRect, pyqtSlot
 from PyQt5.QtGui import QFont
 
 from data import BackupProfile
 from globaldata import *
 from errors import BackupProfileNotFoundError
+from threads import BackupThread
 
 class EditBackupProfileWidget(QWidget):
     def __init__(self, par, profile_id):
@@ -129,29 +130,34 @@ class EditBackupProfileWidget(QWidget):
             return fdiag.selectedFiles()
         return []
     
+    @pyqtSlot()
     def _prompt_to_add_source_folders(self):
-        self._add_to_list(self._profile.getSources(), self._directory_dialog("Select Sources to Backup"))
+        self._add_to_list(self._profile.sources, self._directory_dialog("Select Sources to Backup"))
         self._apply_profile_to_fields()
     
+    @pyqtSlot()
     def _prompt_to_add_destination_folders(self):
         self._add_to_list(self._profile.destinations, self._directory_dialog("Select Destinations to Target"))
         self._apply_profile_to_fields()
     
+    @pyqtSlot()
     def _set_profile_name(self):
         self._profile.name = self.name_tbox.text()
 
+    @pyqtSlot()
     def _delete_selected_source(self):
         self._remove_selected_item_from_list(self.sources_listbox, self._profile.getSources())
         self._apply_profile_to_fields()
     
+    @pyqtSlot()
     def _delete_selected_destination(self):
         self._remove_selected_item_from_list(self.destinations_listbox, self._profile.destinations)
         self._apply_profile_to_fields()
     
+    @pyqtSlot()
     def _delete_backup_profile(self):
         global PDATA
         profiles = PDATA.profiles
-        print("delete profile clicked")
         if BackupProfile.getById(profiles, self._profile.ID) is not None:
             for x in range(0, len(profiles)):
                 if profiles[x].ID == self._profile.ID:
@@ -163,6 +169,7 @@ class EditBackupProfileWidget(QWidget):
         else:
             self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
     
+    @pyqtSlot()
     def _finish_editing_profile(self):
         global PDATA
         profiles = PDATA.profiles
@@ -182,9 +189,11 @@ class EditBackupProfileWidget(QWidget):
             PDATA.save()
             self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
 
+    @pyqtSlot()
     def _cancel_edit(self):
         self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
 
+    @pyqtSlot()
     def _set_enabled_buttons(self):
         self.sources_del_button.setEnabled(len(self.sources_listbox.selectedItems()) > 0)
         self.destinations_del_button.setEnabled(len(self.destinations_listbox.selectedItems()) > 0)
@@ -275,3 +284,62 @@ class ExecuteBackupWidget(QWidget):
     def __init__(self, parent, backup):
         super(ExecuteBackupWidget, self).__init__(parent)
         self.parent().statusBar().showMessage("Execute: " + backup.name, 3000)
+        self.backup = backup
+        self.executions = []
+
+        self._init_layout()
+        self._connect_handlers()
+
+    def _init_layout(self):
+        mainlayout = QVBoxLayout()
+
+        for entry in self.backup.sources:
+            self.executions.append(QBackupExecution(None, self.backup, entry))
+            mainlayout.addWidget(self.executions[(len(self.executions) - 1)])
+        
+        self.setLayout(mainlayout)
+    
+    def _connect_handlers(self):
+        for e in self.executions:
+            e.backupthread.show_error.connect(self._show_execution_error)
+    
+    def _show_execution_error(self, error):
+        pass
+
+class QBackupExecution(QWidget):
+    def __init__(self, parent, backup, backup_source):
+        super(QBackupExecution, self).__init__(parent)
+
+        self.complete = False
+        self.backup = backup
+        self.source = backup_source
+        self.backupthread = BackupThread()
+        self.backupthread.backup = {"source": self.source, "destinations": self.backup.destinations}
+
+        self._init_layout()
+        self._connect_handlers()
+
+    def _init_layout(self):
+        mainlayout = QVBoxLayout()
+        
+        self.progressbar = QProgressBar()
+        self.groupbox = QGroupBox(os.path.dirname(self.source))
+        t = QVBoxLayout()
+        t.addWidget(self.progressbar)
+        self.groupbox.setLayout(t)
+        
+        mainlayout.addWidget(self.groupbox)
+        self.setLayout(mainlayout)
+    
+    def _connect_handlers(self):
+        self.backupthread.progress_update.connect(self._update_progress)
+        self.backupthread.exec_finished.connect(self._backup_finished)
+
+    @pyqtSlot(float)
+    def _update_progress(self, percent):
+        self.progressbar.setValue(percent)
+    
+    @pyqtSlot()
+    def _backup_finished(self):
+        self.backupthread.join()
+        self.complete = True
