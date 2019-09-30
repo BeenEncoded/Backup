@@ -100,58 +100,32 @@ class BackupProfile:
         super(BackupProfile, self).__init__()
 
         if dictionary is None:
-            self._name = ""
-            self._sources = []
-            self._destinations = []
-            self._ID = 0
+            self.name = ""
+            self.sources = []
+            self.destinations = []
+            self.ID = 0
         else:
-            self._name = dictionary["name"]
-            self._sources = dictionary["sources"]
-            self._destinations = dictionary["destinations"]
-            self._ID = dictionary["id"]
-
+            self.name = dictionary["name"]
+            self.sources = dictionary["sources"]
+            self.destinations = dictionary["destinations"]
+            self.ID = dictionary["id"]
+    
     def __eq__(self, other):
         if not isinstance(other, BackupProfile):
             return False
-        return ((self._sources == other._sources) and (self._destinations == other._destinations) and \
-        (self._name == other._name) and (self._ID == other._ID))
+        return ((self.sources == other.sources) and (self.destinations == other.destinations) and \
+        (self.name == other.name) and (self.ID == other.ID))
     
     def __str__(self):
-        return "Name: " + self._name + \
-        "      Sources: " + str(self._sources) + \
-        "      Destinations: " + str(self._destinations)
-
-    def setName(self, name):
-        if not isinstance(name, str):
-            raise WrongArgumentTypeError("BackupProfile.setName(string name): wrong argument type passed as \'name\'!")
-        self._name = name
-    
-    def getName(self):
-        return self._name
-
-    def getSources(self):
-        return self._sources
-    
-    def setSources(self, value):
-        self._sources = value
-    
-    def getDestinations(self):
-        return self._destinations
-    
-    def setDestinations(self, value):
-        self._destinations = value
-    
-    def getID(self):
-        return self._ID
-    
-    def setID(self, newid):
-        self._ID = newid
+        return "Name: " + self.name + \
+        "      Sources: " + str(self.sources) + \
+        "      Destinations: " + str(self.destinations)
 
     def assignID(self, profiles):
-        ids = [e.getID() for e in profiles]
-        self._ID = 0
-        while self._ID in ids:
-            self._ID += 1
+        ids = [e.ID for e in profiles]
+        self.ID = 0
+        while self.ID in ids:
+            self.ID += 1
     
     @staticmethod
     def getById(profiles, id):
@@ -159,7 +133,7 @@ class BackupProfile:
         Returns the profile with the matching ID, or None if no profile
         or multiple profiles with the same ID was found.
         '''
-        matches = [p for p in profiles if p.getID() == id]
+        matches = [p for p in profiles if p.ID == id]
         if len(matches) == 0:
             return None
         elif len(matches) == 1:
@@ -169,7 +143,7 @@ class BackupProfile:
     @staticmethod
     def reassignAllIds(profiles):
         for p in profiles:
-            p.setID(-1)
+            p.ID = -1
         for p in profiles:
             p.assignID(profiles)
 
@@ -181,7 +155,7 @@ class BackupProfile:
         '''
         with open(filename, 'w') as file:
             return json.dump(\
-            [{"name": p.getName(), "sources": p.getSources(), "destinations": p.getDestinations(), "id": p.getID()} for p in profiles], \
+            [{"name": p.name, "sources": p.sources, "destinations": p.destinations, "id": p.ID} for p in profiles], \
                 fp=file, indent=4, sort_keys=True)
     
     @staticmethod

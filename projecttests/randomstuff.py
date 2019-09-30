@@ -18,10 +18,10 @@ def randomBackupProfile():
     '''
     profile = BackupProfile()
     for x in range(0, random.randint(2, 10)):
-        profile.getDestinations().append(sanitize_string(randomstring(20, 50)))
+        profile.destinations.append(sanitize_string(randomstring(20, 50)))
     for x in range(0, random.randint(1, 5)):
-        profile.getSources().append(sanitize_string(randomstring(20,50)))
-    profile.setName(sanitize_string(randomstring(10, 20)))
+        profile.sources.append(sanitize_string(randomstring(20,50)))
+    profile.name = sanitize_string(randomstring(10, 20))
     return profile
 
 def sanitize_string(s):

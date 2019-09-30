@@ -89,11 +89,11 @@ class EditBackupProfileWidget(QWidget):
         self.setLayout(mainlayout)
     
     def _apply_profile_to_fields(self):
-        self.name_tbox.setText(self._profile.getName())
+        self.name_tbox.setText(self._profile.name)
         self.sources_listbox.clear()
         self.destinations_listbox.clear()
-        self.sources_listbox.addItems(self._profile.getSources())
-        self.destinations_listbox.addItems(self._profile.getDestinations())
+        self.sources_listbox.addItems(self._profile.sources)
+        self.destinations_listbox.addItems(self._profile.destinations)
 
     def _connect_handlers(self):
         self.sources_add_button.clicked.connect(self._prompt_to_add_source_folders)
@@ -134,7 +134,7 @@ class EditBackupProfileWidget(QWidget):
         self._apply_profile_to_fields()
     
     def _prompt_to_add_destination_folders(self):
-        self._add_to_list(self._profile.getDestinations(), self._directory_dialog("Select Destinations to Target"))
+        self._add_to_list(self._profile.destinations, self._directory_dialog("Select Destinations to Target"))
         self._apply_profile_to_fields()
     
     def _set_profile_name(self):
@@ -145,16 +145,16 @@ class EditBackupProfileWidget(QWidget):
         self._apply_profile_to_fields()
     
     def _delete_selected_destination(self):
-        self._remove_selected_item_from_list(self.destinations_listbox, self._profile.getDestinations())
+        self._remove_selected_item_from_list(self.destinations_listbox, self._profile.destinations)
         self._apply_profile_to_fields()
     
     def _delete_backup_profile(self):
         global PDATA
         profiles = PDATA.getProfiles()
         print("delete profile clicked")
-        if BackupProfile.getById(profiles, self._profile.getID()) is not None:
+        if BackupProfile.getById(profiles, self._profile.ID) is not None:
             for x in range(0, len(profiles)):
-                if profiles[x].getID() == self._profile.getID():
+                if profiles[x].ID == self._profile.ID:
                     profiles.pop(x)
                     PDATA.setProfiles(profiles)
                     PDATA.save()
@@ -167,9 +167,9 @@ class EditBackupProfileWidget(QWidget):
         global PDATA
         profiles = PDATA.getProfiles()
         backupfilename = CONFIG.config['DEFAULT']['profilepath']
-        if BackupProfile.getById(profiles, self._profile.getID()) is not None:
+        if BackupProfile.getById(profiles, self._profile.ID) is not None:
             for x in range(0, len(profiles)):
-                if profiles[x].getID() == self._profile.getID():
+                if profiles[x].ID == self._profile.ID:
                     profiles[x] = self._profile
                     PDATA.setProfiles(profiles)
                     PDATA.save()
@@ -188,7 +188,7 @@ class EditBackupProfileWidget(QWidget):
     def _set_enabled_buttons(self):
         self.sources_del_button.setEnabled(len(self.sources_listbox.selectedItems()) > 0)
         self.destinations_del_button.setEnabled(len(self.destinations_listbox.selectedItems()) > 0)
-        self.delete_profile_button.setEnabled(BackupProfile.getById(PDATA.getProfiles(), self._profile.getID()) is not None)
+        self.delete_profile_button.setEnabled(BackupProfile.getById(PDATA.getProfiles(), self._profile.ID) is not None)
 
     def _remove_selected_item_from_list(self, listwidget, listob):
         '''
@@ -234,7 +234,7 @@ class ManageBackupsWidget(QWidget):
         self.backup_combobox = QComboBox()
         self.editbackup_button = QPushButton("<- Edit")
         backuplist_label = QLabel("Select a Backup: ")
-        self.backup_combobox.addItems([p.getName() for p in self._profiles])
+        self.backup_combobox.addItems([p.name for p in self._profiles])
         dropdownbox_layout.addWidget(backuplist_label)
         dropdownbox_layout.addWidget(self.backup_combobox)
         dropdownbox_layout.addWidget(self.editbackup_button)
@@ -269,9 +269,9 @@ class ManageBackupsWidget(QWidget):
         if i < 0:
             return
         if i < len(self._profiles):
-            self.parent().setCentralWidget(EditBackupProfileWidget(self.parent(), self._profiles[i].getID()))
+            self.parent().setCentralWidget(EditBackupProfileWidget(self.parent(), self._profiles[i].ID))
 
 class ExecuteBackupWidget(QWidget):
     def __init__(self, parent, backup):
         super(ExecuteBackupWidget, self).__init__(parent)
-        self.parent().statusBar().showMessage("Execute: " + backup.getName(), 3000)
+        self.parent().statusBar().showMessage("Execute: " + backup.name, 3000)

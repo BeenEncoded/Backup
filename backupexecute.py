@@ -33,7 +33,7 @@ class BackupThread(threading.Thread):
         self._init_vars()
         l = threading.local()
         l.sources = self.data.backup.getSources()
-        l.destinations = self.data.backup.getDestinations()
+        l.destinations = self.data.backup.destinations
         l.sources_count = 0
         l.sources_copied = 0
         l.status = ProcessStatus(0.0, "Counting stuff...")
