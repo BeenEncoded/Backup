@@ -1,12 +1,13 @@
 import os, queue
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QRect, pyqtSlot
+from PyQt5.QtCore import Qt, QRect, pyqtSlot, pyqtSignal
 from PyQt5.QtGui import QFont
 
 from data import BackupProfile
 from globaldata import *
 from errors import BackupProfileNotFoundError
-from threads import BackupThread
+from threads import BackupThread, ProcessStatus
+from filesystem.iterator import recursivecopy
 
 class EditBackupProfileWidget(QWidget):
     def __init__(self, par, profile_id):
@@ -263,9 +264,11 @@ class ManageBackupsWidget(QWidget):
         self.editbackup_button.clicked.connect(self._edit_selected_backup)
         self.executebackup_button.clicked.connect(self._execute_backup)
     
+    @pyqtSlot()
     def _new_backup(self):
         self.parent().setCentralWidget(EditBackupProfileWidget(self.parent(), -1))
     
+    @pyqtSlot()
     def _execute_backup(self):
         i = self.backup_combobox.currentIndex()
         if i < 0:
@@ -273,6 +276,7 @@ class ManageBackupsWidget(QWidget):
         if i < len(self._profiles):
             self.parent().setCentralWidget(ExecuteBackupWidget(self.parent(), self._profiles[i]))
 
+    @pyqtSlot()
     def _edit_selected_backup(self):
         i = self.backup_combobox.currentIndex()
         if i < 0:
@@ -289,24 +293,51 @@ class ExecuteBackupWidget(QWidget):
 
         self._init_layout()
         self._connect_handlers()
+        
+        for e in self.executions:
+            e.startExecution()
 
     def _init_layout(self):
         mainlayout = QVBoxLayout()
 
+        #executions qwidgets
         for entry in self.backup.sources:
             self.executions.append(QBackupExecution(None, self.backup, entry))
             mainlayout.addWidget(self.executions[(len(self.executions) - 1)])
         
+        #errors textbox
+        gbox = QGroupBox("Errors:")
+        gbox_layout = QVBoxLayout()
+        self.errors_textedit = QPlainTextEdit()
+        gbox_layout.addWidget(self.errors_textedit)
+        gbox.setLayout(gbox_layout)
+        mainlayout.addWidget(gbox)
+
+        #some settings:
+        self.errors_textedit.setReadOnly(True)
+
         self.setLayout(mainlayout)
     
     def _connect_handlers(self):
         for e in self.executions:
-            e.backupthread.show_error.connect(self._show_execution_error)
+            e.backupthread.qcom.show_error.connect(self._show_execution_error)
+            e.removeself.connect(self._remove_completed)
     
+    @pyqtSlot(recursivecopy.UnexpectedError)
     def _show_execution_error(self, error):
-        pass
+        self.errors_textedit.appendPlainText(str(error))
+
+    @pyqtSlot()
+    def _remove_completed(self):
+        while len([e.completed for e in self.executions if e.complete]) > 0:
+            for x in range(0, len(self.executions)):
+                if self.executions[x].completed:
+                    self.executions.pop(x)
+                    break
 
 class QBackupExecution(QWidget):
+    removeself = pyqtSignal()
+
     def __init__(self, parent, backup, backup_source):
         super(QBackupExecution, self).__init__(parent)
 
@@ -323,23 +354,33 @@ class QBackupExecution(QWidget):
         mainlayout = QVBoxLayout()
         
         self.progressbar = QProgressBar()
+        self.currentop_label = QLabel()
+        self.currentop_label.setMaximumWidth(500)
         self.groupbox = QGroupBox(os.path.dirname(self.source))
         t = QVBoxLayout()
         t.addWidget(self.progressbar)
+        t.addWidget(self.currentop_label)
         self.groupbox.setLayout(t)
         
         mainlayout.addWidget(self.groupbox)
+        
         self.setLayout(mainlayout)
     
     def _connect_handlers(self):
-        self.backupthread.progress_update.connect(self._update_progress)
-        self.backupthread.exec_finished.connect(self._backup_finished)
+        self.backupthread.qcom.progress_update.connect(self._update_progress)
+        self.backupthread.qcom.exec_finished.connect(self._backup_finished)
 
-    @pyqtSlot(float)
-    def _update_progress(self, percent):
-        self.progressbar.setValue(percent)
+    def startExecution(self):
+        self.backupthread.start()
+
+    @pyqtSlot(ProcessStatus)
+    def _update_progress(self, status):
+        self.progressbar.setValue(status.percent)
+        self.currentop_label.setText(status.message)
     
     @pyqtSlot()
     def _backup_finished(self):
         self.backupthread.join()
         self.complete = True
+        self.removeself.emit()
+    
