@@ -162,4 +162,4 @@ class BackupProfile:
             with open(filename, 'r') as file:
                 x = json.load(file)
                 return [BackupProfile(entry) for entry in x]
-        raise FileNotFoundError("Tried to open " + filename + " to load backups from and couldn't find the file.")
+        return []
