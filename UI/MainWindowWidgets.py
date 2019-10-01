@@ -147,7 +147,7 @@ class EditBackupProfileWidget(QWidget):
 
     @pyqtSlot()
     def _delete_selected_source(self):
-        self._remove_selected_item_from_list(self.sources_listbox, self._profile.getSources())
+        self._remove_selected_item_from_list(self.sources_listbox, self._profile.sources)
         self._apply_profile_to_fields()
     
     @pyqtSlot()
@@ -298,13 +298,13 @@ class ExecuteBackupWidget(QWidget):
             e.startExecution()
 
     def _init_layout(self):
-        mainlayout = QVBoxLayout()
+        self.mainlayout = QVBoxLayout()
 
         #executions qwidgets
         for entry in self.backup.sources:
             if os.path.isdir(entry):
-                self.executions.append(QBackupExecution(None, self.backup, entry))
-                mainlayout.addWidget(self.executions[(len(self.executions) - 1)])
+                self.executions.append(QBackupExecution(self, self.backup, entry))
+                self.mainlayout.addWidget(self.executions[(len(self.executions) - 1)])
             else:
                 QMessageBox.information("Not a folder: " + entry)
         if len(self.executions) == 0:
@@ -316,16 +316,16 @@ class ExecuteBackupWidget(QWidget):
         self.errors_textedit = QPlainTextEdit()
         gbox_layout.addWidget(self.errors_textedit)
         gbox.setLayout(gbox_layout)
-        mainlayout.addWidget(gbox)
+        self.mainlayout.addWidget(gbox)
 
         #Cancel button
         self.cancel_button = QPushButton("Cancel")
-        mainlayout.addWidget(self.cancel_button)
+        self.mainlayout.addWidget(self.cancel_button)
 
         #some settings:
         self.errors_textedit.setReadOnly(True)
 
-        self.setLayout(mainlayout)
+        self.setLayout(self.mainlayout)
     
     def _connect_handlers(self):
         for e in self.executions:
@@ -350,7 +350,7 @@ class ExecuteBackupWidget(QWidget):
         while len([e.complete for e in self.executions if e.complete]) > 0:
             for x in range(0, len(self.executions)):
                 if self.executions[x].complete:
-                    self.executions.pop(x)
+                    self.mainlayout.removeWidget(self.executions.pop(x))
                     break
         if len(self.executions) == 0:
             self.cancel_button.setText("Back")
@@ -387,7 +387,6 @@ class QBackupExecution(QWidget):
         
         self.progressbar = QProgressBar()
         self.currentop_label = QLabel()
-        self.currentop_label.setMaximumWidth(500)
         self.groupbox = QGroupBox(os.path.dirname(self.source))
         t = QVBoxLayout()
         t.addWidget(self.progressbar)
