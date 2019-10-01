@@ -23,6 +23,9 @@ class BackupThread(threading.Thread):
 
     def run(self):
         self.stop = False
+        if len(self.backup["destinations"]) == 0:
+            self.raiseFinished()
+            return
         l = threading.local()
         l.source = self.backup["source"]
         l.destinations = self.backup["destinations"]
@@ -50,7 +53,6 @@ class BackupThread(threading.Thread):
             l.status.percent = ((l.sources_copied * 100) / l.sources_count)
             self.updateProgress(l.status)
         self.raiseFinished()
-        return
     
     def updateProgress(self, status):
         '''

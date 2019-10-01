@@ -88,6 +88,8 @@ class recursivecopy:
         return self
     
     def __next__(self):
+        if len(self._destinations) == 0:
+            raise StopIteration()
         self.current = next(self.iter)
         return self._copy_fsobject(self.current, self._destinations)
     
@@ -101,6 +103,8 @@ class recursivecopy:
     # None if nothing was copied at all.  This can happen if the predicate returns false, or
     #      No destinations are specified.
     def _copy_fsobject(self, source_path, destination_folders):
+        if len(destination_folders) == 0:
+            return [recursivecopy.NothingWasDoneError()]
         #first if the predicate is set, filter our destinations so that we are only going 
         #to copy what we want.
         if self._predicate != None:
