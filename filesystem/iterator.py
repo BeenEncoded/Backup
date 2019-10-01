@@ -181,10 +181,14 @@ class recursivecopy:
         with open(source, 'rb') as sourcefile:
             #here we have a list of destination streams:
             dest_files = []
-            for destination in destinations:
-                dest_files.append(open(destination, 'wb'))
+            for x in range(0, len(destinations)):
+                try:
+                    dest_files.append(open(destinations[x], 'wb'))
+                except FileNotFoundError as e:
+                    results[x][0] = False
+                    results[x][1] = recursivecopy.UnexpectedError("File not found.", e)
             
-            while True:
+            while len(dest_files) > 0:
                 #read once from the source, and write that data to each destination stream.
                 #this should ease the stress of the operation on the drive.
                 data = sourcefile.read()
@@ -239,6 +243,9 @@ class recursivecopy:
         def __init__(self, message="No message set.", exception=None):
             self.message = message
             self.exception = exception
+        
+        def __str__(self):
+                return self.message + os.linesep + str(self.exception)
 
     class PathNotWorkingError(UnexpectedError):
         '''
