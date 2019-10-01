@@ -40,6 +40,7 @@ class BackupThread(threading.Thread):
         l.status.message = "Copying..."
         l.status.percent = 0.0
         iterator = iter(recursivecopy(l.source, l.destinations, predicate=copypredicate.if_source_was_modified_more_recently))
+        print("thread beginning iteration")
         while True and not self.stop:
             try:
                 errors = next(iterator)
@@ -49,9 +50,10 @@ class BackupThread(threading.Thread):
                 for error in errors:
                     self.showError(error)
             l.sources_copied += 1
-            l.status.message = iterator.current
+            l.status.message = self._display_string(iterator.current)
             l.status.percent = ((l.sources_copied * 100) / l.sources_count)
             self.updateProgress(l.status)
+        print("thread raising finished")
         self.raiseFinished()
     
     def updateProgress(self, status):
@@ -68,3 +70,8 @@ class BackupThread(threading.Thread):
         pyqtSignal: Shows an exception to the user. 
         '''
         self.qcom.show_error.emit(error)
+
+    def _display_string(self, s):
+        if len(s) > 50:
+            s = (s[:int((50 / 2) - 3)] + "..." + s[len(s) - int(50 / 2 + 1):])
+        return s
