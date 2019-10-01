@@ -302,8 +302,13 @@ class ExecuteBackupWidget(QWidget):
 
         #executions qwidgets
         for entry in self.backup.sources:
-            self.executions.append(QBackupExecution(None, self.backup, entry))
-            mainlayout.addWidget(self.executions[(len(self.executions) - 1)])
+            if os.path.isdir(entry):
+                self.executions.append(QBackupExecution(None, self.backup, entry))
+                mainlayout.addWidget(self.executions[(len(self.executions) - 1)])
+            else:
+                QMessageBox.information("Not a folder: " + entry)
+        if len(self.executions) == 0:
+            self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
         
         #errors textbox
         gbox = QGroupBox("Errors:")
@@ -349,6 +354,7 @@ class ExecuteBackupWidget(QWidget):
                     break
         if len(self.executions) == 0:
             self.cancel_button.setText("Back")
+            QMessageBox.information(self, "Complete!", "Backup Finished.")
 
 class QBackupExecution(QWidget):
     removeself = pyqtSignal()
@@ -360,11 +366,22 @@ class QBackupExecution(QWidget):
         self.backup = backup
         self.source = backup_source
         self.backupthread = BackupThread()
-        self.backupthread.backup = {"source": self.source, "destinations": self.backup.destinations}
+        self.backupthread.backup = {"source": self.source, "destinations": []}
 
         self._init_layout()
         self._connect_handlers()
-
+        invalid = []
+        for d in backup.destinations:
+            if os.path.isdir(d):
+                self.backupthread.backup["destinations"].append(d)
+            else:
+                invalid.append(d)
+        if len(invalid) > 0:
+            message = "Paths are not folders: "
+            for x in invalid:
+                message += os.linesep + x
+            QMessageBox.information(self, "Unavailable Destinations", message)
+    
     def _init_layout(self):
         mainlayout = QVBoxLayout()
         
