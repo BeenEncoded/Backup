@@ -3,3 +3,6 @@ launch.json
 test/*
 backup.conf
 backup_profiles.json
+*.spec
+build
+dist
