@@ -40,7 +40,7 @@ class BackupThread(threading.Thread):
         l.status.message = "Copying..."
         l.status.percent = 0.0
         iterator = iter(recursivecopy(l.source, l.destinations, predicate=copypredicate.if_source_was_modified_more_recently))
-        while True and not self.stop:
+        while not self.stop:
             try:
                 errors = next(iterator)
             except StopIteration:
