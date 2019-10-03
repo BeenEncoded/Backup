@@ -345,10 +345,9 @@ class ExecuteBackupWidget(QWidget):
 
     @pyqtSlot()
     def _remove_completed(self):
-        while len([e.complete for e in self.executions if e.complete]) > 0:
-            for x in range(0, len(self.executions)):
-                if self.executions[x].complete:
-                    self.executions[x].hide()
+        for x in range(0, len(self.executions)):
+            if self.executions[x].complete:
+                self.executions[x].hide()
         if len(self.executions) == 0:
             self.cancel_button.setText("Back")
             QMessageBox.information(self, "Complete!", "Backup Finished.")
