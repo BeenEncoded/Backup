@@ -383,7 +383,7 @@ class QBackupExecution(QWidget):
         
         self.progressbar = QProgressBar()
         self.currentop_label = QLabel()
-        self.groupbox = QGroupBox(os.path.dirname(self.source))
+        self.groupbox = QGroupBox(self.source)
         t = QVBoxLayout()
         t.addWidget(self.progressbar)
         t.addWidget(self.currentop_label)
