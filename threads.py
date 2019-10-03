@@ -18,10 +18,10 @@ class BackupThread(threading.Thread):
         progress_update = pyqtSignal(ProcessStatus)
         show_error = pyqtSignal(recursivecopy.UnexpectedError)
         exec_finished = pyqtSignal()
-    
-    qcom = QtComObject()
 
     def run(self):
+        if not hasattr(self, "qcom"):
+            self.qcom = BackupThread.QtComObject()
         self.stop = False
         if len(self.backup["destinations"]) == 0:
             self.raiseFinished()
