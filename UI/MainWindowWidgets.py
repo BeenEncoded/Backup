@@ -341,8 +341,6 @@ class ExecuteBackupWidget(QWidget):
     def _cancel_backups(self):
         for e in self.executions:
             e.stopExecution()
-            while e.backupthread.is_alive():
-                pass
         self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
 
     @pyqtSlot()
@@ -398,6 +396,8 @@ class QBackupExecution(QWidget):
         self.setLayout(mainlayout)
     
     def _connect_handlers(self):
+        if not hasattr(self.backupthread, "qcom"):
+            self.backupthread.qcom = BackupThread.QtComObject()
         self.backupthread.qcom.progress_update.connect(self._update_progress)
         self.backupthread.qcom.exec_finished.connect(self._backup_finished)
 
