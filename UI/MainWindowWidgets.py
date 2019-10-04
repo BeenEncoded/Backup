@@ -126,6 +126,11 @@ class EditBackupProfileWidget(QWidget):
         fdiag.setWindowTitle(title)
         fdiag.setViewMode(QFileDialog.Detail)
         fdiag.setModal(True)
+        fdiag.setOption(QFileDialog.DontUseNativeDialog, True)
+
+        for v in fdiag.findChildren((QListView, QTreeView)):
+            if isinstance(v.model(), QFileSystemModel):
+                v.setSelectionMode(QAbstractItemView.MultiSelection)
 
         if fdiag.exec():
             return fdiag.selectedFiles()
