@@ -301,12 +301,23 @@ class ExecuteBackupWidget(QWidget):
         self.mainlayout = QVBoxLayout()
 
         #executions qwidgets
+        scrollingview = QScrollArea()
+        scrollingview.setWidgetResizable(True)
+        gb = QGroupBox("")
+        gb.setFlat(True)
+        gblayout = QVBoxLayout()
+
         for entry in self.backup.sources:
             if os.path.isdir(entry):
                 self.executions.append(QBackupExecution(self, self.backup, entry))
-                self.mainlayout.addWidget(self.executions[(len(self.executions) - 1)])
+                gblayout.addWidget(self.executions[(len(self.executions) - 1)])
             else:
                 QMessageBox.information("Not a folder: " + entry)
+        
+        gb.setLayout(gblayout)
+        scrollingview.setWidget(gb)
+        self.mainlayout.addWidget(scrollingview)
+
         if len(self.executions) == 0:
             self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
         
@@ -348,7 +359,8 @@ class ExecuteBackupWidget(QWidget):
         for x in range(0, len(self.executions)):
             if self.executions[x].complete:
                 self.executions[x].hide()
-        if len(self.executions) == 0:
+        tempexecs = [e for e in self.executions if not e.isHidden()]
+        if len(tempexecs) == 0:
             self.cancel_button.setText("Back")
             QMessageBox.information(self, "Complete!", "Backup Finished.")
 
