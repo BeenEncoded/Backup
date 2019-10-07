@@ -305,26 +305,8 @@ class ExecuteBackupWidget(QWidget):
     def _init_layout(self):
         self.mainlayout = QVBoxLayout()
 
-        #executions qwidgets
-        scrollingview = QScrollArea()
-        scrollingview.setWidgetResizable(True)
-        gb = QGroupBox("")
-        gb.setFlat(True)
-        gblayout = QVBoxLayout()
-
-        for entry in self.backup.sources:
-            if os.path.isdir(entry):
-                self.executions.append(QBackupExecution(self, self.backup, entry))
-                gblayout.addWidget(self.executions[(len(self.executions) - 1)])
-            else:
-                QMessageBox.information("Not a folder: " + entry)
-        
-        gb.setLayout(gblayout)
-        scrollingview.setWidget(gb)
-        self.mainlayout.addWidget(scrollingview)
-
-        if len(self.executions) == 0:
-            self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
+        #add execution widgets
+        self.mainlayout.addWidget(self._execution_widgets(self.backup))
         
         #errors textbox
         gbox = QGroupBox("Errors:")
@@ -340,8 +322,11 @@ class ExecuteBackupWidget(QWidget):
 
         #some settings:
         self.errors_textedit.setReadOnly(True)
-
+        
         self.setLayout(self.mainlayout)
+
+        if not self._can_backup(self.backup):
+            self.cancel_button.setText("Return")
     
     def _connect_handlers(self):
         for e in self.executions:
@@ -349,6 +334,62 @@ class ExecuteBackupWidget(QWidget):
             e.removeself.connect(self._remove_completed)
         self.cancel_button.clicked.connect(self._cancel_backups)
     
+    def _invalid_paths(self, backup_profile):
+        '''
+        makes sure that all the paths in the passed profile are ok.  This function
+        should return true if and only if the souces and destiations of the backup
+        are valid.
+
+        returns [invalid_sources], [invalid_destinations]
+        '''
+        invalid_src = [entry for entry in backup_profile.sources if not os.path.isdir(entry)]
+        invalid_dest = [entry for entry in backup_profile.destinations if not os.path.isdir(entry)]
+        return invalid_src, invalid_dest
+
+    def _can_backup(self, backup):
+        valid_sources = [s for s in backup.sources if os.path.isdir(s)]
+        valid_destinations = [d for d in backup.destinations if os.path.isdir(d)]
+        return (len(valid_sources) > 0) and (len(valid_destinations) > 0) and (len(self.executions) > 0)
+
+    def _execution_widgets(self, backup):
+        #executions qwidgets
+        scrollingview = QScrollArea()
+        scrollingview.setWidgetResizable(True)
+        gb = QGroupBox()
+        gb.setFlat(True)
+        gblayout = QVBoxLayout()
+
+        #first, though, we need to be sure that everything is good:
+        invalid_sources, invalid_destinations = self._invalid_paths(backup)
+
+        valid_sources = [source for source in backup.sources if os.path.isdir(source)]
+        valid_destinations = [dest for dest in backup.destinations if os.path.isdir(dest)]
+        
+        if len(invalid_destinations) > 0:
+            message = "Can not backup to certain destinations: "
+            for entry in invalid_destinations:
+                message += (os.linesep + entry)
+            QMessageBox.warning(self, "Invalid Destination Directories", message)
+        if len(invalid_sources) > 0:
+            message = "Can not backup certain sources: "
+            for entry in invalid_sources:
+                message += (os.linesep + entry)
+            QMessageBox.warning(self, "Invalid Source Directories", message)
+
+        if (len(valid_sources) > 0) and (len(valid_destinations) > 0):
+            for entry in valid_sources:
+                self.executions.append(QBackupExecution(self, {"source": entry, "destinations": valid_destinations}))
+                gblayout.addWidget(self.executions[(len(self.executions) - 1)])
+        else:
+            QMessageBox.critical(self.parent(), "Error!", "Unable to perform the backup.")
+            messagelabel = QLabel("Nothing to backup!")
+            messagelabel.setAlignment(Qt.AlignCenter)
+            gblayout.addWidget(messagelabel)
+        
+        gb.setLayout(gblayout)
+        scrollingview.setWidget(gb)
+        return scrollingview
+
     @pyqtSlot(recursivecopy.UnexpectedError)
     def _show_execution_error(self, error):
         self.errors_textedit.appendPlainText(str(error))
@@ -372,35 +413,22 @@ class ExecuteBackupWidget(QWidget):
 class QBackupExecution(QWidget):
     removeself = pyqtSignal()
 
-    def __init__(self, parent, backup, backup_source):
+    def __init__(self, parent, backup={"source": "", "destinations": []}):
         super(QBackupExecution, self).__init__(parent)
 
         self.complete = False
-        self.backup = backup
-        self.source = backup_source
         self.backupthread = BackupThread()
-        self.backupthread.backup = {"source": self.source, "destinations": []}
+        self.backupthread.backup = backup
 
         self._init_layout()
         self._connect_handlers()
-        invalid = []
-        for d in backup.destinations:
-            if os.path.isdir(d):
-                self.backupthread.backup["destinations"].append(d)
-            else:
-                invalid.append(d)
-        if len(invalid) > 0:
-            message = "Paths are not folders: "
-            for x in invalid:
-                message += os.linesep + x
-            QMessageBox.information(self, "Unavailable Destinations", message)
     
     def _init_layout(self):
         mainlayout = QVBoxLayout()
         
         self.progressbar = QProgressBar()
         self.currentop_label = QLabel()
-        self.groupbox = QGroupBox(self.source)
+        self.groupbox = QGroupBox(self.backupthread.backup["source"])
         t = QVBoxLayout()
         t.addWidget(self.progressbar)
         t.addWidget(self.currentop_label)
