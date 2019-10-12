@@ -5,13 +5,14 @@ from PyQt5.QtGui import QFont
 from data import BackupProfile
 from filesystem.iterator import recursive, recursivecopy, copypredicate
 from errors import *
+import dataclasses
 
 import threading
 
+@dataclasses.dataclass
 class ProcessStatus:
-    def __init__(self, percent_complete=0.0, mess=""):
-        self.message = mess
-        self.percent = percent_complete
+    percent: float = 0.0
+    message: str = str()
 
 class BackupThread(threading.Thread):
     class QtComObject(QObject):
@@ -69,7 +70,7 @@ class BackupThread(threading.Thread):
         '''
         self.qcom.show_error.emit(error)
 
-    def _display_string(self, s):
+    def _display_string(self, s) -> str:
         if len(s) > 50:
             s = (s[:int((50 / 2) - 3)] + "..." + s[len(s) - int(50 / 2 + 1):])
         return s
