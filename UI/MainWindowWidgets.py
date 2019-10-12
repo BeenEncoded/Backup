@@ -1,4 +1,4 @@
-import os, queue
+import os, queue, typing
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QRect, pyqtSlot, pyqtSignal
 from PyQt5.QtGui import QFont
@@ -334,7 +334,7 @@ class ExecuteBackupWidget(QWidget):
             e.removeself.connect(self._remove_completed)
         self.cancel_button.clicked.connect(self._cancel_backups)
     
-    def _invalid_paths(self, backup_profile):
+    def _invalid_paths(self, backup_profile) -> (typing.List[str], typing.List[str]):
         '''
         makes sure that all the paths in the passed profile are ok.  This function
         should return true if and only if the souces and destiations of the backup
@@ -346,7 +346,7 @@ class ExecuteBackupWidget(QWidget):
         invalid_dest = [entry for entry in backup_profile.destinations if not os.path.isdir(entry)]
         return invalid_src, invalid_dest
 
-    def _can_backup(self, backup):
+    def _can_backup(self, backup) -> bool:
         valid_sources = [s for s in backup.sources if os.path.isdir(s)]
         valid_destinations = [d for d in backup.destinations if os.path.isdir(d)]
         return (len(valid_sources) > 0) and (len(valid_destinations) > 0) and (len(self.executions) > 0)
