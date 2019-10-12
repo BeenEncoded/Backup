@@ -1,4 +1,4 @@
-import json, os, configparser
+import json, os, configparser, dataclasses
 
 from errors import *
 
@@ -74,13 +74,15 @@ class ProgramData:
     def _save_profiles(self):
         BackupProfile.writejson(self.profiles, self._config['DEFAULT']['profilepath'])
 
+@dataclasses.dataclass
 class BackupProfile:
+    name: str = ""
+    sources: list = dataclasses.field(default_factory=list)
+    destinations: list = dataclasses.field(default_factory=list)
+    ID: int = 0
+
     '''
     ## Backup profile:
-        string name
-        list[string] sources
-        list[string] destinations
-        int ID
     
     ## Serialization:
         A static methods are provided to convert the object from and to a json.
@@ -93,12 +95,7 @@ class BackupProfile:
         '''
         super(BackupProfile, self).__init__()
 
-        if dictionary is None:
-            self.name = ""
-            self.sources = []
-            self.destinations = []
-            self.ID = 0
-        else:
+        if dictionary is not None:
             self.name = dictionary["name"]
             self.sources = dictionary["sources"]
             self.destinations = dictionary["destinations"]
