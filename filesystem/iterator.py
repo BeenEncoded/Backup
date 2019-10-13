@@ -240,11 +240,11 @@ class recursivecopy:
         An unexpected error...  This is no an exception class.  It represents data returned after an operation
         fails with unexpected results.
         '''
-        def __init__(self, message="No message set.", exception=None):
+        def __init__(self, message: str="No message set.", exception: Exception=None):
             self.message = message
             self.exception = exception
         
-        def __str__(self):
+        def __str__(self) -> str:
                 return self.message + os.linesep + str(self.exception)
 
     class PathNotWorkingError(UnexpectedError):
@@ -252,44 +252,44 @@ class recursivecopy:
         This error refers to whenever a path registers as not existing, or not referring to
         an expected object (for instance, it's not a folder even though it was expected to be)
         '''
-        def __init__(self, message="No message set", path=""):
+        def __init__(self, message: str="No message set", path: str=""):
             super(recursivecopy.PathNotWorkingError, self).__init__(message, None)
             self.path = path
         
-        def __str__(self):
+        def __str__(self) -> str:
             return self.message + os.linesep + "Path: " + self.path
 
     class PathOperationFailedError(UnexpectedError):
-        def __init__(self, message="No Message Set", exception=None, path=None):
+        def __init__(self, message: str="No Message Set", exception: Exception=None, path: str=None):
             super(recursivecopy.PathOperationFailedError, self).__init__(message, exception)
             self.path=path
         
-        def __str__(self):
+        def __str__(self) -> str:
             return self.message + os.linesep + self.path + os.linesep + str(self.exception)
 
     class WrongArgumentTypeError(UnexpectedError):
-        def __init__(self, message="No message set.", argtype=type(None), expectedtype=type(None)):
+        def __init__(self, message: str="No message set.", argtype: type=type(None), expectedtype: type=type(None)):
             super(recursivecopy.WrongArgumentTypeError, self).__init__(message, None)
             self.argument_type = argtype
             self.expected_type = expectedtype
         
-        def __str__(self):
+        def __str__(self) -> str:
                 return self.message + os.linesep + "Expected type " + str(self.expected_type) + " but instead got " + str(self.argument_type)
 
     class WrongArgumentValueError(UnexpectedError):
-        def __init__(self, message, argvalue=None, expectedvalue=None):
+        def __init__(self, message: str=None, argvalue=None, expectedvalue=None):
             super(recursivecopy.WrongArgumentValueError, self).__init__(message, None)
             self.argument = argvalue
             self.expected_argument = expectedvalue
 
-        def __str__(self):
+        def __str__(self) -> str:
                 return self.message + os.linesep + "Expected " + str(self.argument) + " but got " + str(self.expected_argument)
 
     class NothingWasDoneError(UnexpectedError):
-        def __init__(self):
+        def __init__(self, message: str=None, exception: Exception=None):
             super(recursivecopy.NothingWasDoneError, self).__init__("Nothing was done.", None)
         
-        def __str__(self):
+        def __str__(self) -> str:
                 return self.message
 
 class copypredicate:
