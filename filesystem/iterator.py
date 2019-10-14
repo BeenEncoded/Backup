@@ -217,7 +217,7 @@ class recursivecopy:
             # this can mean a couple things, but we add this primarily to address files with nothing
             # in them.
             # We assume that in this case if the file being opened was successful, so was the write(s)
-            if not haveread:
+            if not haveread and (len(dest_files) > 0):
                 for r in results:
                     #make sure that the error wasn't overridden by an exception during
                     #opening the destination filehandles
@@ -245,7 +245,11 @@ class recursivecopy:
         for x in range(0, len(destinations)):
             if destinations[x] != source:
                 if not os.path.exists(destinations[x]):
-                    os.mkdir(destinations[x])
+                    try:
+                        os.mkdir(destinations[x])
+                    except OSError as e:
+                        results[x][0] = False
+                        results[x][1] = recursivecopy.UnexpectedError("Can't make directory!", exception=e)
                 results[x][0] = os.path.exists(destinations[x])
                 if results[x][0]:
                     shutil.copystat(source, destinations[x], follow_symlinks=False)
