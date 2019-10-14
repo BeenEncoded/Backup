@@ -55,7 +55,7 @@ class BackupThread(threading.Thread):
             self.updateProgress(l.status)
         self.raiseFinished()
     
-    def updateProgress(self, status):
+    def updateProgress(self, status: ProcessStatus):
         '''
         ##pyqtSignal: Emits a signal to update progress of the backup's process.
         '''
@@ -70,7 +70,7 @@ class BackupThread(threading.Thread):
         '''
         self.qcom.show_error.emit(error)
 
-    def _display_string(self, s) -> str:
+    def _display_string(self, s: str="") -> str:
         if len(s) > 50:
             s = (s[:int((50 / 2) - 3)] + "..." + s[len(s) - int(50 / 2 + 1):])
         return s
