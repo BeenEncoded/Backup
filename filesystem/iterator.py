@@ -250,6 +250,7 @@ class recursivecopy:
                     except OSError as e:
                         results[x][0] = False
                         results[x][1] = recursivecopy.UnexpectedError("Can't make directory!", exception=e)
+                        continue
                 results[x][0] = os.path.exists(destinations[x])
                 if results[x][0]:
                     shutil.copystat(source, destinations[x], follow_symlinks=False)
