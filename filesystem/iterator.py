@@ -178,57 +178,67 @@ class recursivecopy:
         for x in range(0, len(destinations)):
             results.append([False, recursivecopy.NothingWasDoneError()])
 
+        #open the source file
+        try:
+            sourcefile = open(source, 'rb')
+        except PermissionError as e:
+            for r in results:
+                r[0] = False
+                r[1] = recursivecopy.CantOpenFileError("Source: Permission denied.", exception=e, filename=source)
+            return results
+
         #perform the copy operation.
-        with open(source, 'rb') as sourcefile:
-            #here we have a list of destination streams:
-            dest_files = []
-            for x in range(0, len(destinations)):
-                try:
-                    dest_files.append(open(destinations[x], 'wb'))
-                except FileNotFoundError as e:
+        #here we have a list of destination streams:
+        dest_files = []
+        for x in range(0, len(destinations)):
+            try:
+                dest_files.append(open(destinations[x], 'wb'))
+            except FileNotFoundError as e:
+                results[x][0] = False
+                results[x][1] = recursivecopy.UnexpectedError("File not found.", e)
+            except OSError as e:
+                results[x][0] = False
+                results[x][1] = recursivecopy.CantOpenFileError("Error on opening destination path.", \
+                    exception=e, filename=destinations[x])
+        
+        #perform the writing operation.
+        haveread = False
+        while len(dest_files) > 0:
+            #read once from the source, and write that data to each destination stream.
+            #this should ease the stress of the operation on the drive.
+            data = sourcefile.read()
+            if len(data) == 0:
+                break  # <-- at EOF
+
+            if not haveread:
+                haveread = True
+
+            #Attempt to write the read data to each target destination:
+            for x in range(0, len(dest_files)):
+                if dest_files[x].write(data) == len(data):
+                    results[x][0] = True
+                    results[x][1] = None
+                else:
                     results[x][0] = False
-                    results[x][1] = recursivecopy.UnexpectedError("File not found.", e)
-                except OSError as e:
-                    results[x][0] = False
-                    results[x][1] = recursivecopy.CantOpenFileError("Error on opening destination path.", \
-                        exception=e, filename=destinations[x])
-            
-            haveread = False
-            while len(dest_files) > 0:
-                #read once from the source, and write that data to each destination stream.
-                #this should ease the stress of the operation on the drive.
-                data = sourcefile.read()
-                if len(data) == 0:
-                    break  # <-- at EOF
+                    results[x][1] = recursivecopy.PathOperationFailedError("Failed to write all the data to the destination file!", path=destinations[x])
+        
+        # here, we address the issue where the length of data read was zero on the first read.
+        # this can mean a couple things, but we add this primarily to address files with nothing
+        # in them.
+        # We assume that in this case if the file being opened was successful, so was the write(s)
+        if not haveread and (len(dest_files) > 0):
+            for r in results:
+                #make sure that the error wasn't overridden by an exception during
+                #opening the destination filehandles
+                if type(r[1]) is recursivecopy.NothingWasDoneError:
+                    r[0] = True
+                    r[1] = None
 
-                if not haveread:
-                    haveread = True
-
-                #Attempt to write the read data to each target destination:
-                for x in range(0, len(dest_files)):
-                    if dest_files[x].write(data) == len(data):
-                        results[x][0] = True
-                        results[x][1] = None
-                    else:
-                        results[x][0] = False
-                        results[x][1] = recursivecopy.PathOperationFailedError("Failed to write all the data to the destination file!", path=destinations[x])
-            
-            # here, we address the issue where the length of data read was zero on the first read.
-            # this can mean a couple things, but we add this primarily to address files with nothing
-            # in them.
-            # We assume that in this case if the file being opened was successful, so was the write(s)
-            if not haveread and (len(dest_files) > 0):
-                for r in results:
-                    #make sure that the error wasn't overridden by an exception during
-                    #opening the destination filehandles
-                    if type(r[1]) is recursivecopy.NothingWasDoneError:
-                        r[0] = True
-                        r[1] = None
-
-            #the write operations are complete.  Close all the destination
-            # streams:
-            for f in dest_files:
-                f.close()
+        #the write operations are complete.  Close all the destination
+        # streams:
+        for f in dest_files:
+            f.close()
+        sourcefile.close()
         
         #now we need to copy over all the attributes:
         for x in range(0, len(destinations)):
