@@ -1,4 +1,4 @@
-import os, shutil, io
+import os, shutil, io, typing
 
 from errors import *
 
@@ -102,9 +102,10 @@ class recursivecopy:
     # [UnexpectedError]
     # None if nothing was copied at all.  This can happen if the predicate returns false, or
     #      No destinations are specified.
-    def _copy_fsobject(self, source_path, destination_folders):
+    def _copy_fsobject(self, source_path: str, destination_folders: list):
         if len(destination_folders) == 0:
-            return [recursivecopy.NothingWasDoneError()]
+            return [recursivecopy.NothingWasDoneError("Destination folders had a length of zero.  Returned from \
+                copy immediately.")]
         #first if the predicate is set, filter our destinations so that we are only going 
         #to copy what we want.
         if self._predicate != None:
@@ -116,7 +117,7 @@ class recursivecopy:
         
         #return if we aren't going to copy anything.
         if len(destination_folders) == 0:
-            return None
+            return []
 
         new_dests = destination_folders
         success = False
@@ -162,7 +163,7 @@ class recursivecopy:
     # Returns: an array containing [bool: success, recursivecopy.UnexpectedError: error data] that is the length
     # of the number of destinations.  Each element represents one of the copy operations 
     # that took place.
-    def _copy_file(self, source, destinations=[]):
+    def _copy_file(self, source: str, destinations: list=[]):
         if isinstance(destinations, str):
             destinations = [destinations]
         if not os.path.isfile(source):
@@ -187,13 +188,21 @@ class recursivecopy:
                 except FileNotFoundError as e:
                     results[x][0] = False
                     results[x][1] = recursivecopy.UnexpectedError("File not found.", e)
+                except OSError as e:
+                    results[x][0] = False
+                    results[x][1] = recursivecopy.CantOpenFileError("Error on opening destination path.", \
+                        exception=e, filename=destinations[x])
             
+            haveread = False
             while len(dest_files) > 0:
                 #read once from the source, and write that data to each destination stream.
                 #this should ease the stress of the operation on the drive.
                 data = sourcefile.read()
                 if len(data) == 0:
                     break  # <-- at EOF
+
+                if not haveread:
+                    haveread = True
 
                 #Attempt to write the read data to each target destination:
                 for x in range(0, len(dest_files)):
@@ -204,6 +213,18 @@ class recursivecopy:
                         results[x][0] = False
                         results[x][1] = recursivecopy.PathOperationFailedError("Failed to write all the data to the destination file!", path=destinations[x])
             
+            # here, we address the issue where the length of data read was zero on the first read.
+            # this can mean a couple things, but we add this primarily to address files with nothing
+            # in them.
+            # We assume that in this case if the file being opened was successful, so was the write(s)
+            if not haveread:
+                for r in results:
+                    #make sure that the error wasn't overridden by an exception during
+                    #opening the destination filehandles
+                    if type(r[1]) is recursivecopy.NothingWasDoneError:
+                        r[0] = True
+                        r[1] = None
+
             #the write operations are complete.  Close all the destination
             # streams:
             for f in dest_files:
@@ -215,7 +236,7 @@ class recursivecopy:
                 shutil.copystat(source, destinations[x])
         return results
     
-    def _copy_folder(self, source, destinations=[]):
+    def _copy_folder(self, source: str, destinations: list=[]):
         results = []
         for x in range(0, len(destinations)):
             results.append([False, recursivecopy.NothingWasDoneError()])
@@ -285,6 +306,14 @@ class recursivecopy:
         def __str__(self) -> str:
                 return self.message + os.linesep + "Expected " + str(self.argument) + " but got " + str(self.expected_argument)
 
+    class CantOpenFileError(UnexpectedError):
+        def __init__(self, message: str, exception: Exception=None, filename: str=""):
+            super(recursivecopy.CantOpenFileError, self).__init__(message, exception)
+            self.filename = filename
+        
+        def __str__(self):
+                return "Exception: " + str(self.exception) + os.linesep + "File: " + self.filename
+
     class NothingWasDoneError(UnexpectedError):
         def __init__(self, message: str=None, exception: Exception=None):
             super(recursivecopy.NothingWasDoneError, self).__init__("Nothing was done.", None)
@@ -294,7 +323,7 @@ class recursivecopy:
 
 class copypredicate:
     @staticmethod
-    def if_source_was_modified_more_recently(source, destination=""):
+    def if_source_was_modified_more_recently(source: str="", destination: str="") -> bool:
         if os.path.exists(destination):
             return os.path.getmtime(source) > os.path.getmtime(destination)
         return True
@@ -303,7 +332,7 @@ class copypredicate:
 # /c/abc/abc1/bac3
 #  V 
 # ['/c/abc', 'abc1/bac3']
-def split_path(parent, child):
+def split_path(parent: str, child: str) -> typing.Tuple[str, str]:
     if os.path.isabs(parent) == False:
         parent = os.path.abspath(parent)
     if os.path.isabs(child) == False:
@@ -312,7 +341,7 @@ def split_path(parent, child):
         return parent, child[(len(parent) + 1):]
     return parent, ""
 
-def ischild(parent, child):
+def ischild(parent: str, child: str) -> bool:
     if len(parent) <= len(child):
         return (parent == child[:len(parent)])
     return False
