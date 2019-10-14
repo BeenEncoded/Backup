@@ -1,4 +1,4 @@
-import json, os, configparser, dataclasses
+import json, os, configparser, dataclasses, typing
 
 from errors import *
 
@@ -42,16 +42,20 @@ class Configuration:
         with open("backup.conf", 'w') as config_file:
             self.config.write(config_file)
 
+@dataclasses.dataclass
 class ProgramData:
     '''
     Stores and manages all global program data aside from configuration.
     It requires the program configuration to save and load.
     It does not load anything on construction.  This is to allow wiping the program
     data without deleting any files by simple assignment.
+
+    This object is not responsible for configuration manegement, loading, or saving.  It simply
+    requires it for use in determining locations of files and such.
     '''
-    def __init__(self, configuration):
-        self.profiles = []
-        self._config = configuration
+
+    _config: Configuration=Configuration()
+    profiles: list=dataclasses.field(default_factory=list)
     
     def load(self):
         self._load_profiles()
@@ -81,32 +85,6 @@ class BackupProfile:
     destinations: list = dataclasses.field(default_factory=list)
     ID: int = 0
 
-    '''
-    ## Backup profile:
-    
-    ## Serialization:
-        A static methods are provided to convert the object from and to a json.
-    '''
-    def __init__(self, dictionary=None):
-        '''
-        Passing a dictionary initializes a BackupProfile using a dictionary 
-        {"names": ..., "sources": ..., "destinations":...,"ID": ...}
-        This is primarily useful for loading from the json serialization.
-        '''
-        super(BackupProfile, self).__init__()
-
-        if dictionary is not None:
-            self.name = dictionary["name"]
-            self.sources = dictionary["sources"]
-            self.destinations = dictionary["destinations"]
-            self.ID = dictionary["id"]
-    
-    def __eq__(self, other):
-        if not isinstance(other, BackupProfile):
-            return False
-        return ((self.sources == other.sources) and (self.destinations == other.destinations) and \
-        (self.name == other.name) and (self.ID == other.ID))
-    
     def __str__(self):
         return "Name: " + self.name + \
         "      Sources: " + str(self.sources) + \
@@ -158,5 +136,9 @@ class BackupProfile:
         if os.path.isfile(filename):
             with open(filename, 'r') as file:
                 x = json.load(file)
-                return [BackupProfile(entry) for entry in x]
+                return [_profile_from_dict(entry) for entry in x]
         return []
+
+def _profile_from_dict(profile: dict={"name": "", "sources": [], "destinations": [], "id": 0}) -> BackupProfile:
+    return BackupProfile(profile["name"], profile["sources"], profile["destinations"], profile["id"])
+
