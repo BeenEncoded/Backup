@@ -290,7 +290,7 @@ class ManageBackupsWidget(QWidget):
             self.parent().setCentralWidget(EditBackupProfileWidget(self.parent(), self._profiles[i].ID))
 
 class ExecuteBackupWidget(QWidget):
-    def __init__(self, parent, backup):
+    def __init__(self, parent, backup: BackupProfile):
         super(ExecuteBackupWidget, self).__init__(parent)
         self.parent().statusBar().showMessage("Execute: " + backup.name, 3000)
         self.backup = backup
@@ -351,7 +351,7 @@ class ExecuteBackupWidget(QWidget):
         valid_destinations = [d for d in backup.destinations if os.path.isdir(d)]
         return (len(valid_sources) > 0) and (len(valid_destinations) > 0) and (len(self.executions) > 0)
 
-    def _execution_widgets(self, backup):
+    def _execution_widgets(self, backup: BackupProfile) -> QScrollArea:
         #executions qwidgets
         scrollingview = QScrollArea()
         scrollingview.setWidgetResizable(True)
@@ -377,6 +377,8 @@ class ExecuteBackupWidget(QWidget):
             QMessageBox.warning(self, "Invalid Source Directories", message)
 
         if (len(valid_sources) > 0) and (len(valid_destinations) > 0):
+            gblayout.addWidget(self._label_list("Sources: ", valid_sources))
+            gblayout.addWidget(self._label_list("Destinations: ", valid_destinations))
             for entry in valid_sources:
                 self.executions.append(QBackupExecution(self, {"source": entry, "destinations": valid_destinations}))
                 gblayout.addWidget(self.executions[(len(self.executions) - 1)])
@@ -389,6 +391,15 @@ class ExecuteBackupWidget(QWidget):
         gb.setLayout(gblayout)
         scrollingview.setWidget(gb)
         return scrollingview
+    
+    def _label_list(self, name: str="No name set", paths: list=[]) -> QGroupBox:
+        gb = QGroupBox(name)
+        glayout = QVBoxLayout()
+
+        for p in paths:
+            glayout.addWidget(QLabel(p))
+        gb.setLayout(glayout)
+        return gb
 
     @pyqtSlot(recursivecopy.UnexpectedError)
     def _show_execution_error(self, error):
