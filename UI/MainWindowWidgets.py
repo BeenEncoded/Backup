@@ -377,7 +377,6 @@ class ExecuteBackupWidget(QWidget):
             QMessageBox.warning(self, "Invalid Source Directories", message)
 
         if (len(valid_sources) > 0) and (len(valid_destinations) > 0):
-            gblayout.addWidget(self._label_list("Sources: ", valid_sources))
             gblayout.addWidget(self._label_list("Destinations: ", valid_destinations))
             for entry in valid_sources:
                 self.executions.append(QBackupExecution(self, {"source": entry, "destinations": valid_destinations}))
