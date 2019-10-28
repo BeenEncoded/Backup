@@ -254,6 +254,7 @@ class ManageBackupsWidget(QWidget):
         self._set_enabled_buttons()
     
     def _init_layout(self):
+        self.parent().setWindowTitle("Backup")
         mainlayout = QVBoxLayout()
 
         self.newbackup_button = QPushButton("New Backup")
