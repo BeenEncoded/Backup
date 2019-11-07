@@ -6,3 +6,4 @@ backup_profiles.json
 *.spec
 build
 dist
+.vscode/settings.json
