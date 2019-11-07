@@ -20,21 +20,27 @@ from PyQt5.QtGui import QFont
 
 from UI.MainWindowWidgets import EditBackupProfileWidget, ManageBackupsWidget
 from globaldata import *
+import logging
+
+logger = logging.getLogger("UI.MainWindow")
 
 class MainWindow(QMainWindow):
     def __init__(self, parent):
+        logger.info("Initializing MainWindow")
         super(MainWindow, self).__init__(parent)
         self.statusBar().setEnabled(True)
         self._add_menubar()
         
         self.setCentralWidget(ManageBackupsWidget(self))
         self._apply_configuration()
+        logger.info("Maindow set up.")
         self.show()
     
     def _apply_configuration(self):
         '''
         Applies the program's configuration to the UI.
         '''
+        logger.info("Applying configuration to the main window.")
         uiconfig = CONFIG.config['ui']
 
         self.setFont(QFont(str(uiconfig['font']), int(uiconfig['font_size'])))
@@ -56,6 +62,7 @@ class MainWindow(QMainWindow):
         Version: """ + str(VERSION))
 
 def display_gui(argv):
+    logger.debug("display_gui called with args: " + str(argv))
     app = QApplication(argv)
     window = MainWindow(None)
     return app.exec()

@@ -18,14 +18,36 @@ import sys, atexit, os
 from UI.MainWindow import display_gui
 from globaldata import *
 from data import BackupProfile
+import logging
+
+def setup_logging():
+    root = logging.getLogger()
+    f = logging.Formatter("%(asctime)s [%(name)s] [%(levelname)s] -> %(message)s")
+    sh = logging.StreamHandler(sys.stdout)
+    fh = logging.FileHandler(LOGFILE)
+
+    sh.setFormatter(f)
+    fh.setFormatter(f)
+
+    root.addHandler(sh)
+    root.addHandler(fh)
+    root.setLevel(LOG_LEVEL)
+    print("log level: " + str(LOG_LEVEL))
 
 def onexit():
-    print("Saving everything...")
     global CONFIG
     global PDATA
     CONFIG.save()
     PDATA.save()
 
 if __name__ == "__main__":
+    setup_logging()
+    logging.getLogger("main").info("logger initialized")
     atexit.register(onexit)
-    sys.exit(display_gui(sys.argv))
+    
+    returnvalue = -1
+    try:
+        returnvalue = display_gui(sys.argv)
+    except:
+        logging.getLogger().exception("CRITICAL EXCEPTION")
+    sys.exit(returnvalue)

@@ -13,11 +13,23 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import semver
+import semver, os, sys, logging
 
 from data import Configuration, ProgramData
 
 #This file contains globals
-VERSION = semver.VersionInfo(1, 1, 0, "beta")
-CONFIG = Configuration()
-PDATA = ProgramData(_config=CONFIG.config)
+
+#Global non-constant data
+CONFIG =    Configuration()
+PDATA =     ProgramData(_config=CONFIG.config)
+
+#global constants
+VERSION =   semver.VersionInfo(1, 1, 0, "beta")
+LOGFILE =   (os.path.abspath(".") + os.path.sep + "backup_program.log")
+LOG_LEVEL = {
+    "critical": logging.CRITICAL,
+    "error":    logging.ERROR,
+    "warning":  logging.WARNING,
+    "info":     logging.INFO,
+    "debug":    logging.DEBUG,
+    "notset":   logging.NOTSET}[CONFIG.config['DEFAULT']['loglevel']]

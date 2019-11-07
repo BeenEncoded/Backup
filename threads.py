@@ -20,10 +20,10 @@ from PyQt5.QtGui import QFont
 
 from data import BackupProfile
 from filesystem.iterator import recursive, recursivecopy, copypredicate
-from errors import *
-import dataclasses
 
-import threading
+import dataclasses, threading, logging
+
+logger = logging.getLogger("threads")
 
 @dataclasses.dataclass
 class ProcessStatus:
@@ -37,11 +37,13 @@ class BackupThread(threading.Thread):
         exec_finished = pyqtSignal()
 
     def run(self):
+        logger.warning("BackupThread starting to run.")
         if not hasattr(self, "qcom"):
             self.qcom = BackupThread.QtComObject()
         self.stop = False
         if len(self.backup["destinations"]) == 0:
             self.raiseFinished()
+            logger.warning("No destination folders, doing nothing.")
             return
         l = threading.local()
         l.source = self.backup["source"]
@@ -86,7 +88,7 @@ class BackupThread(threading.Thread):
         '''
         self.qcom.show_error.emit(error)
 
-    def _display_string(self, s: str="") -> str:
-        if len(s) > 50:
-            s = (s[:int((50 / 2) - 3)] + "..." + s[len(s) - int(50 / 2 + 1):])
+    def _display_string(self, s: str="", length: int=100) -> str:
+        if len(s) > length:
+            s = (s[:int((length / 2) - 3)] + "..." + s[len(s) - int(length / 2 + 1):])
         return s

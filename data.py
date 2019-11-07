@@ -14,9 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import json, os, configparser, dataclasses, typing
+import json, os, configparser, dataclasses, typing, logging
 
-from errors import *
+logger = logging.getLogger("data")
 
 class Configuration:
     '''
@@ -24,6 +24,7 @@ class Configuration:
     initializing global program configuration.
     '''
     def __init__(self):
+        logger.debug("Configuration instantiated.")
         super(Configuration, self).__init__()
 
         #set up the configuration, initializing it with some sane defaults
@@ -32,6 +33,8 @@ class Configuration:
         #here we make sure that we search for a config file, and 
         #if none is loaded we write it.
         if len(self.config.read(["backup.conf"])) == 0:
+            logger.warning("Configuration file not found, saving to " + \
+                (os.path.abspath(".") + os.path.sep + "backup.conf"))
             self.save()
     
     #This function returns a default configuration.
@@ -42,7 +45,8 @@ class Configuration:
         c = configparser.ConfigParser()
 
         c['DEFAULT'] = {
-            "profilepath": os.path.abspath("./backup_profiles.json")
+            "profilepath": os.path.abspath("./backup_profiles.json"),
+            "loglevel": "debug"
         }
 
         c['ui'] = {
@@ -74,25 +78,33 @@ class ProgramData:
     profiles: list=dataclasses.field(default_factory=list)
     
     def load(self):
+        logger.info("loading program data...")
         self._load_profiles()
 
         # print("Loaded")
         # print(str([str(b) for b in self.profiles]))
+        logger.info("program data loaded.")
 
     def save(self):
+        logger.info("program data being saved to the disk...")
         self._save_profiles()
 
         # print("Saved")
         # print(str([str(b) for b in self.profiles]))
+        logger.info("program data saved.")
 
     def _load_profiles(self):
+        logger.debug("loading backup profiles...")
         self.profiles.clear()
         self.profiles = BackupProfile.readjson(self._config['DEFAULT']['profilepath'])
         #now we re-assign the ids because the json could have been edited by the luser...
         BackupProfile.reassignAllIds(self.profiles)
+        logger.debug("backup profiles loaded")
     
     def _save_profiles(self):
+        logger.debug("saving backup profiles")
         BackupProfile.writejson(self.profiles, self._config['DEFAULT']['profilepath'])
+        logger.debug("backup profiles saved")
 
 @dataclasses.dataclass
 class BackupProfile:
@@ -107,6 +119,7 @@ class BackupProfile:
         "      Destinations: " + str(self.destinations)
 
     def assignID(self, profiles):
+        logger.debug("Assigning a new id to backup profile: " + self.name)
         ids = [e.ID for e in profiles]
         self.ID = 0
         while self.ID in ids:
@@ -118,6 +131,7 @@ class BackupProfile:
         Returns the profile with the matching ID, or None if no profile
         or multiple profiles with the same ID was found.
         '''
+        logger.debug("Finding backup profile with id: " + str(id))
         matches = [p for p in profiles if p.ID == id]
         if len(matches) == 0:
             return None
@@ -127,6 +141,7 @@ class BackupProfile:
 
     @staticmethod
     def reassignAllIds(profiles):
+        logger.debug("Reassigning all backup profile ids.")
         for p in profiles:
             p.ID = -1
         for p in profiles:

@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import os, shutil, io, typing
+import os, shutil, io, typing, logging
 
-from errors import *
+logger = logging.getLogger("filesystem.iterator")
 
 # This is basically just a wrapper class around os.walk, but it actually
 # iterates over everything.
@@ -130,6 +130,14 @@ class recursivecopy:
             for x in destination_folders:
                 if self._predicate(source_path, os.path.join(x, split_path(self._source, source_path)[1])):
                     tempdlist.append(x)
+
+            #purely for logging purposes, we gather information on what paths were removed from the 
+            #list of destinations and log that.  That's good info... yum yum
+            excluded = [ex for ex in destination_folders if ex not in tempdlist]
+            if len(excluded) > 0:
+                logger.warning("predicate ruled out operations for source[\"" + source_path + "\"] to " + \
+                    "destinations " + str(excluded))
+            
             destination_folders = tempdlist
         
         #return if we aren't going to copy anything.
@@ -184,9 +192,12 @@ class recursivecopy:
         if isinstance(destinations, str):
             destinations = [destinations]
         if not os.path.isfile(source):
+            logger.warning("recursivecopy._copy_file: [\"" + source + "\"] path is not a file.")
             return [[False, PathNotWorkingError("The source path argument is not a file!", source)]]
         for destination in destinations:
             if os.path.basename(source) != os.path.basename(destination):
+                logger.warning("recursivecopy._copy_file: Arguments invalid: " + \
+                    "source: [\"" + source + "\"] destiations: [\"" + destination + "\"]")
                 return [[False, PathNotWorkingError(("The path arguments don't look right...  Here they are: \n" + source + "\n" + destination), destination)]]
         
         #create results to store the results of the operation and 
@@ -199,6 +210,7 @@ class recursivecopy:
         try:
             sourcefile = open(source, 'rb')
         except PermissionError as e:
+            logger.exception("recursivecopy._copy_file")
             for r in results:
                 r[0] = False
                 r[1] = recursivecopy.CantOpenFileError("Source: Permission denied.", exception=e, filename=source)
@@ -211,15 +223,18 @@ class recursivecopy:
             try:
                 dest_files.append(open(destinations[x], 'wb'))
             except FileNotFoundError as e:
+                logger.exception("recursivecopy._copy_file")
                 results[x][0] = False
                 results[x][1] = recursivecopy.UnexpectedError("File not found.", e)
             except OSError as e:
+                logger.exception("recursivecopy._copy_file")
                 results[x][0] = False
                 results[x][1] = recursivecopy.CantOpenFileError("Error on opening destination path.", \
                     exception=e, filename=destinations[x])
         
         #perform the writing operation.
         haveread = False
+        logger.info("Copying [\"" + source + "\"] -> " + str(destinations))
         while len(dest_files) > 0:
             #read once from the source, and write that data to each destination stream.
             #this should ease the stress of the operation on the drive.
@@ -236,9 +251,12 @@ class recursivecopy:
                     results[x][0] = True
                     results[x][1] = None
                 else:
+                    logger.error("Failed to write all the data.  Length of data: " + str(len(data)) + ", " + \
+                        "destination: [\"" + destinations[x] + "\"]  Source: [\"" + source + "\"]")
                     results[x][0] = False
                     results[x][1] = recursivecopy.PathOperationFailedError("Failed to write all the data to the destination file!", path=destinations[x])
         
+        logger.debug("Finished copying [\"" + source + "\"]")
         # here, we address the issue where the length of data read was zero on the first read.
         # this can mean a couple things, but we add this primarily to address files with nothing
         # in them.
@@ -257,6 +275,7 @@ class recursivecopy:
             f.close()
         sourcefile.close()
         
+        logger.debug("Copying stat info for source [\"" + source + "\"] to destinations: " + str(destinations))
         #now we need to copy over all the attributes:
         for x in range(0, len(destinations)):
             if os.path.isfile(destinations[x]):
@@ -275,6 +294,7 @@ class recursivecopy:
                     try:
                         os.mkdir(destinations[x])
                     except OSError as e:
+                        logger.exception("recursivecopy._copy_folder")
                         results[x][0] = False
                         results[x][1] = recursivecopy.UnexpectedError("Can't make directory!", exception=e)
                         continue
@@ -283,8 +303,11 @@ class recursivecopy:
                     shutil.copystat(source, destinations[x], follow_symlinks=False)
                     results[x][1] = None
                 else:
+                    logger.warning("destination [\"" + destinations[x] + "\"] does not exist even after an attempt to create it.")
                     results[x][1] = recursivecopy.PathOperationFailedError(message="Could not mkdir!", path=destinations[x])
             else:
+                logger.error("recursivecopy._copy_folder: arguments invalid; SOURCE == DESTINATIONS   source: [\"" + \
+                    source + "\"]  destinations: " + str(destinations))
                 results[x] = [False, recursivecopy.WrongArgumentValueError("Destination is the source!", argvalue=destinations[x], expectedvalue=("Anything but " + source))]
         return results
     

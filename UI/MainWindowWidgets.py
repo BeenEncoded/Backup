@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import os, queue, typing
+import os, queue, typing, logging
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QRect, pyqtSlot, pyqtSignal
 from PyQt5.QtGui import QFont
@@ -24,6 +24,8 @@ from globaldata import *
 from errors import BackupProfileNotFoundError
 from threads import BackupThread, ProcessStatus
 from filesystem.iterator import recursivecopy
+
+logger = logging.getLogger("UI.MainWindowWidgets")
 
 class EditBackupProfileWidget(QWidget):
     def __init__(self, par, profile_id):
@@ -151,7 +153,7 @@ class EditBackupProfileWidget(QWidget):
         if fdiag.exec():
             return fdiag.selectedFiles()
         return []
-    
+
     @pyqtSlot()
     def _prompt_to_add_source_folders(self):
         self._add_to_list(self._profile.sources, self._directory_dialog("Select Sources to Backup"))
@@ -386,11 +388,13 @@ class ExecuteBackupWidget(QWidget):
             message = "Can not backup to certain destinations: "
             for entry in invalid_destinations:
                 message += (os.linesep + entry)
+            logger.warning(message)
             QMessageBox.warning(self, "Invalid Destination Directories", message)
         if len(invalid_sources) > 0:
             message = "Can not backup certain sources: "
             for entry in invalid_sources:
                 message += (os.linesep + entry)
+            logger.warning(message)
             QMessageBox.warning(self, "Invalid Source Directories", message)
 
         if (len(valid_sources) > 0) and (len(valid_destinations) > 0):
@@ -399,6 +403,10 @@ class ExecuteBackupWidget(QWidget):
                 self.executions.append(QBackupExecution(self, {"source": entry, "destinations": valid_destinations}))
                 gblayout.addWidget(self.executions[(len(self.executions) - 1)])
         else:
+            if len(valid_sources) == 0:
+                logger.error("No valid sources to backup from")
+            if len(valid_destinations) == 0:
+                logger.error("No valid destinations to backup to.")
             QMessageBox.critical(self.parent(), "Error!", "Unable to perform the backup.")
             messagelabel = QLabel("Nothing to backup!")
             messagelabel.setAlignment(Qt.AlignCenter)
@@ -443,6 +451,7 @@ class QBackupExecution(QWidget):
     def __init__(self, parent, backup={"source": "", "destinations": []}):
         super(QBackupExecution, self).__init__(parent)
 
+        logger.info("instantiating new QBackupExecution: " + str(backup))
         self.complete = False
         self.backupthread = BackupThread()
         self.backupthread.backup = backup
