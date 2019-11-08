@@ -36,42 +36,51 @@ class BackupThread(threading.Thread):
         show_error = pyqtSignal(recursivecopy.UnexpectedError)
         exec_finished = pyqtSignal()
 
+    def __init__(self, backup: dict={"source": "", "destinations": []}):
+        super(BackupThread, self).__init__()
+        self.backup = backup
+        self.qcom = BackupThread.QtComObject()
+        self.stop = False
+
     def run(self):
         logger.warning("BackupThread starting to run.")
-        if not hasattr(self, "qcom"):
-            self.qcom = BackupThread.QtComObject()
-        self.stop = False
-        if len(self.backup["destinations"]) == 0:
-            self.raiseFinished()
-            logger.warning("No destination folders, doing nothing.")
-            return
-        l = threading.local()
-        l.source = self.backup["source"]
-        l.destinations = self.backup["destinations"]
-        l.sources_count = 0
-        l.sources_copied = 0
-        l.status = ProcessStatus(0.0, "Counting stuff...")
+        try:
+            self.stop = False
+            if len(self.backup["destinations"]) == 0:
+                self.raiseFinished()
+                logger.warning("No destination folders, doing nothing.")
+                return
+            l = threading.local()
+            l.source = self.backup["source"]
+            l.destinations = self.backup["destinations"]
+            l.sources_count = 0
+            l.sources_copied = 0
+            l.status = ProcessStatus(0.0, "Counting stuff...")
 
-        self.updateProgress(l.status)
-        for entry in recursive(l.source):
-            l.sources_count += 1
-        
-        l.status.message = "Copying..."
-        l.status.percent = 0.0
-        iterator = iter(recursivecopy(l.source, l.destinations, predicate=copypredicate.if_source_was_modified_more_recently))
-        while not self.stop:
-            try:
-                errors = next(iterator)
-            except StopIteration:
-                break
-            if errors is not None:
-                for error in errors:
-                    self.showError(error)
-            l.sources_copied += 1
-            l.status.message = self._display_string(iterator.current)
-            l.status.percent = ((l.sources_copied * 100) / l.sources_count)
             self.updateProgress(l.status)
-        self.raiseFinished()
+            for entry in recursive(l.source):
+                l.sources_count += 1
+            
+            l.status.message = "Copying..."
+            l.status.percent = 0.0
+            iterator = iter(recursivecopy(l.source, l.destinations, predicate=copypredicate.if_source_was_modified_more_recently))
+            while not self.stop:
+                try:
+                    errors = next(iterator)
+                except StopIteration:
+                    break
+                if errors is not None:
+                    for error in errors:
+                        self.showError(error)
+                l.sources_copied += 1
+                l.status.message = self._display_string(iterator.current)
+                l.status.percent = ((l.sources_copied * 100) / l.sources_count)
+                self.updateProgress(l.status)
+            self.raiseFinished()
+        except:
+            logger.critical("Uncaught exception in a backup thread!")
+            logger.exception("CRITICAL EXCEPTION; " + str(self.backup))
+            self.raiseFinished()
     
     def updateProgress(self, status: ProcessStatus):
         '''
