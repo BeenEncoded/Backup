@@ -15,8 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSlot
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt, pyqtSlot, QRect
+from PyQt5.QtGui import QFont, QKeySequence, QPainter
 
 from UI.MainWindowWidgets import EditBackupProfileWidget, ManageBackupsWidget
 from globaldata import *
@@ -33,6 +33,9 @@ class MainWindow(QMainWindow):
         
         self.setCentralWidget(ManageBackupsWidget(self))
         self._apply_configuration()
+        self.logShortcut = QShortcut(QKeySequence("Ctrl+L"), self)
+        self.logShortcut.activated.connect(self._show_log_window)
+        self.logwindow = LogWindow()
         logger.info("Maindow set up.")
         self.show()
     
@@ -44,6 +47,15 @@ class MainWindow(QMainWindow):
         uiconfig = CONFIG.config['ui']
 
         self.setFont(QFont(str(uiconfig['font']), int(uiconfig['font_size'])))
+
+    @pyqtSlot()
+    def _show_log_window(self):
+        logger.debug("Ctrl+L pressed")
+        self.logwindow.show()
+
+    def closeEvent(self, event):
+        logger.debug("MainWindow closed.")
+        self.logwindow.close()
 
     def _add_menubar(self):
         self.menuBar().addAction('About', self._show_about)
@@ -61,6 +73,49 @@ class MainWindow(QMainWindow):
         You should have received a copy of the GNU General Public License along with this program.  If not, see <https://www.gnu.org/licenses/>.
         
         Version: """ + str(VERSION))
+
+class LogWindow(QWidget):
+    def __init__(self, parent=None):
+        super(LogWindow, self).__init__(parent)
+        self._layout()
+        self._connect()
+        logging.getLogger().addHandler(LogWindow.WindowLogHandler(self))
+    
+    def _layout(self):
+        self.setWindowFlag(Qt.WindowCloseButtonHint, False)
+        mainlayout = QVBoxLayout()
+
+        self.log_output = QPlainTextEdit()
+        self.closebutton = QPushButton("Close")
+
+        self.log_output.setReadOnly(True)
+        self.log_output.setMaximumBlockCount(100) #only 100 log entries will be shown
+        
+        mainlayout.addWidget(self.log_output)
+        closelayout = QHBoxLayout()
+        closelayout.addWidget(self.closebutton)
+        mainlayout.addLayout(closelayout)
+        self.setLayout(mainlayout)
+
+        uiconfig = CONFIG.config['ui']
+
+        self.setFont(QFont(str(uiconfig['font']), int(uiconfig['font_size'])))
+    
+    def _connect(self):
+        self.closebutton.clicked.connect(self._close_logwindow)
+    
+    @pyqtSlot()
+    def _close_logwindow(self):
+        self.hide()
+
+    class WindowLogHandler(logging.Handler):
+        def __init__(self, window):
+            super(LogWindow.WindowLogHandler, self).__init__()
+            self.window = window
+            self.setFormatter(logging.Formatter("%(asctime)s [%(name)s] [%(levelname)s] -> %(message)s"))
+
+        def emit(self, record):
+            self.window.log_output.appendPlainText(self.format(record))
 
 def display_gui(argv):
     logger.debug("display_gui called with args: " + str(argv))
