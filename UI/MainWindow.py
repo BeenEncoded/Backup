@@ -50,6 +50,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def _show_about(self):
+        logger.info("showing about")
         QMessageBox.information(self, "GNU GPLv3:", """Backup backs up a user's computer to one or more disk drives or block devices.
         Copyright (C) 2019 Jonathan Whitlock
 

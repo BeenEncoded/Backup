@@ -431,6 +431,7 @@ class ExecuteBackupWidget(QWidget):
 
     @pyqtSlot()
     def _cancel_backups(self):
+        logger.warning("Cancel button clicked!")
         for e in self.executions:
             e.stopExecution()
         self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
@@ -484,6 +485,8 @@ class QBackupExecution(QWidget):
         self.backupthread.start()
 
     def stopExecution(self):
+        if self.backupthread.isAlive():
+            logger.warning("Aborting backup in progress: " + str(self.backupthread.backup))
         self.backupthread.stop = True
         self.backupthread.join()
 
