@@ -46,7 +46,7 @@ class Configuration:
 
         c['DEFAULT'] = {
             "profilepath": os.path.abspath("./backup_profiles.json"),
-            "loglevel": "debug"
+            "loglevel": "warning"
         }
 
         c['ui'] = {
