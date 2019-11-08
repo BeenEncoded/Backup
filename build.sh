@@ -1,1 +1,1 @@
-pyinstaller --onefile -w -n backup ./main.py
+pyinstaller --onefile -w -n backuplinux ./main.py
