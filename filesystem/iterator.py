@@ -238,7 +238,16 @@ class recursivecopy:
         while len(dest_files) > 0:
             #read once from the source, and write that data to each destination stream.
             #this should ease the stress of the operation on the drive.
-            data = sourcefile.read()
+
+            try:
+                data = sourcefile.read()
+            except PermissionError as e:
+                logger.exception("PermissionError; source=\"" + source + "\"")
+                for result in results:
+                    result[0] = False
+                    result[1] = recursivecopy.UnexpectedError(("Error reading source: [\"" + \
+                        source + "\"]"), e)
+                break
             if len(data) == 0:
                 break  # <-- at EOF
 
@@ -256,7 +265,6 @@ class recursivecopy:
                     results[x][0] = False
                     results[x][1] = recursivecopy.PathOperationFailedError("Failed to write all the data to the destination file!", path=destinations[x])
         
-        logger.debug("Finished copying [\"" + source + "\"]")
         # here, we address the issue where the length of data read was zero on the first read.
         # this can mean a couple things, but we add this primarily to address files with nothing
         # in them.
