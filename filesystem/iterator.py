@@ -101,6 +101,10 @@ class recursivecopy:
         self.iter = recursive(self._source)
         self._predicate = predicate
 
+        #log the type of predicate used
+        if predicate is not None:
+            logger.warning("conditional predicate passed to recursivecopy: " + self._predicate.__qualname__)
+
     def __iter__(self):
         return self
     
@@ -135,7 +139,8 @@ class recursivecopy:
             #list of destinations and log that.  That's good info... yum yum
             excluded = [ex for ex in destination_folders if ex not in tempdlist]
             if len(excluded) > 0:
-                logger.info("predicate ruled out operations for source[\"" + source_path + "\"] to " + \
+                logger.info(self._predicate.__qualname__ + \
+                    " ruled out operations for source[\"" + source_path + "\"] to " + \
                     "destinations " + str(excluded))
             
             destination_folders = tempdlist

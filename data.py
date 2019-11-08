@@ -59,6 +59,7 @@ class Configuration:
         return c
 
     def save(self):
+        logger.info("Saving configuration")
         with open("backup.conf", 'w') as config_file:
             self.config.write(config_file)
 
@@ -124,6 +125,7 @@ class BackupProfile:
         self.ID = 0
         while self.ID in ids:
             self.ID += 1
+        logger.debug("New id for \"" + self.name + "\" is " + str(self.ID))
     
     @staticmethod
     def getById(profiles, id):
