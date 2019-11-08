@@ -430,7 +430,8 @@ class ExecuteBackupWidget(QWidget):
 
     @pyqtSlot()
     def _cancel_backups(self):
-        logger.warning("Cancel button clicked!")
+        if self.cancel_button.text() == "Cancel":
+            logger.warning("Cancel button clicked!")
         for e in self.executions:
             e.stopExecution()
         self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))

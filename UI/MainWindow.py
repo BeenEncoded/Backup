@@ -80,6 +80,7 @@ class LogWindow(QWidget):
         self._layout()
         self._connect()
         logging.getLogger().addHandler(LogWindow.WindowLogHandler(self))
+        self.setWindowTitle("LOGS")
     
     def _layout(self):
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
