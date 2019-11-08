@@ -18,13 +18,18 @@ import sys, atexit, os
 from UI.MainWindow import display_gui
 from globaldata import *
 from data import BackupProfile
+from logging.handlers import RotatingFileHandler
 import logging
 
 def setup_logging():
+    if not os.path.exists(LOGS_FOLDER):
+        os.makedirs(LOGS_FOLDER)
+
     root = logging.getLogger()
     f = logging.Formatter("%(asctime)s [%(name)s] [%(levelname)s] -> %(message)s")
     sh = logging.StreamHandler(sys.stdout)
-    fh = logging.FileHandler(LOGFILE)
+    #fh = logging.FileHandler(LOGFILE)
+    fh = RotatingFileHandler(LOGFILE, mode='a', maxBytes=((2**20) * 2.5), backupCount=2, encoding=None, delay=False)
 
     sh.setFormatter(f)
     fh.setFormatter(f)
