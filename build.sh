@@ -1,1 +1,1 @@
-pyinstaller.exe --onefile -w .\main.py
+pyinstaller --onefile -w -n backup ./main.py
