@@ -34,7 +34,6 @@ class EditBackupProfileWidget(QWidget):
         ID
         '''
         global PDATA
-        PDATA.load() #reload program data
 
         super(EditBackupProfileWidget, self).__init__(par)
         profiles = PDATA.profiles
@@ -197,12 +196,10 @@ class EditBackupProfileWidget(QWidget):
     def _finish_editing_profile(self):
         global PDATA
         profiles = PDATA.profiles
-        backupfilename = CONFIG.config['DEFAULT']['profilepath']
         if BackupProfile.getById(profiles, self._profile.ID) is not None:
             for x in range(0, len(profiles)):
                 if profiles[x].ID == self._profile.ID:
                     profiles[x] = self._profile
-                    PDATA.profiles = profiles
                     PDATA.save()
                     self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
                     break
