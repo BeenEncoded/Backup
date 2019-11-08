@@ -453,8 +453,7 @@ class QBackupExecution(QWidget):
 
         logger.info("instantiating new QBackupExecution: " + str(backup))
         self.complete = False
-        self.backupthread = BackupThread()
-        self.backupthread.backup = backup
+        self.backupthread = BackupThread(backup)
 
         self._init_layout()
         self._connect_handlers()

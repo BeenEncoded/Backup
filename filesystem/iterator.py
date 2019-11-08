@@ -135,7 +135,7 @@ class recursivecopy:
             #list of destinations and log that.  That's good info... yum yum
             excluded = [ex for ex in destination_folders if ex not in tempdlist]
             if len(excluded) > 0:
-                logger.warning("predicate ruled out operations for source[\"" + source_path + "\"] to " + \
+                logger.info("predicate ruled out operations for source[\"" + source_path + "\"] to " + \
                     "destinations " + str(excluded))
             
             destination_folders = tempdlist
