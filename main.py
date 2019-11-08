@@ -37,16 +37,18 @@ def setup_logging():
     root.addHandler(sh)
     root.addHandler(fh)
     root.setLevel(LOG_LEVEL)
-    print("log level: " + str(LOG_LEVEL))
+    root.info("log level: " + str(LOG_LEVEL))
 
 def onexit():
     global CONFIG
     global PDATA
     CONFIG.save()
     PDATA.save()
+    logging.getLogger().info("[PROGRAM END]")
 
 if __name__ == "__main__":
     setup_logging()
+    logging.getLogger().info("[PROGRAM START]")
     logging.getLogger("main").info("logger initialized")
     atexit.register(onexit)
     
