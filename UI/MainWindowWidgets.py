@@ -179,13 +179,14 @@ class EditBackupProfileWidget(QWidget):
     
     @pyqtSlot()
     def _delete_backup_profile(self):
+        logger.warning("delete button clicked")
         global PDATA
         profiles = PDATA.profiles
         if BackupProfile.getById(profiles, self._profile.ID) is not None:
             for x in range(0, len(profiles)):
                 if profiles[x].ID == self._profile.ID:
+                    logger.warning("Deleted profile " + str(profiles[x]))
                     profiles.pop(x)
-                    PDATA.profiles = profiles
                     PDATA.save()
                     self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
                     break
@@ -212,6 +213,7 @@ class EditBackupProfileWidget(QWidget):
 
     @pyqtSlot()
     def _cancel_edit(self):
+        logger.warning("Cancel button clicked.  Canceled edit")
         self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
 
     @pyqtSlot()
