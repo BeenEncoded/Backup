@@ -15,8 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSlot, QRect
-from PyQt5.QtGui import QFont, QKeySequence, QPainter
+from PyQt5.QtCore import Qt, pyqtSlot, QRect, QObject, pyqtSignal
+from PyQt5.QtGui import QFont, QKeySequence
 
 from UI.MainWindowWidgets import EditBackupProfileWidget, ManageBackupsWidget
 from globaldata import *
@@ -77,9 +77,12 @@ class MainWindow(QMainWindow):
 class LogWindow(QWidget):
     def __init__(self, parent=None):
         super(LogWindow, self).__init__(parent)
+        self.log_handler = LogWindow.WindowLogHandler(self)
+
         self._layout()
         self._connect()
-        logging.getLogger().addHandler(LogWindow.WindowLogHandler(self))
+
+        logging.getLogger().addHandler(self.log_handler)
         self.setWindowTitle("LOGS")
     
     def _layout(self):
@@ -90,7 +93,7 @@ class LogWindow(QWidget):
         self.closebutton = QPushButton("Close")
 
         self.log_output.setReadOnly(True)
-        self.log_output.setMaximumBlockCount(100) #only 100 log entries will be shown
+        self.log_output.setLineWrapMode(QPlainTextEdit.NoWrap)
         
         mainlayout.addWidget(self.log_output)
         closelayout = QHBoxLayout()
@@ -104,19 +107,35 @@ class LogWindow(QWidget):
     
     def _connect(self):
         self.closebutton.clicked.connect(self._close_logwindow)
+        self.log_handler.qcom.logtowindow.connect(self._log_to_window)
     
     @pyqtSlot()
     def _close_logwindow(self):
         self.hide()
 
+    @pyqtSlot(str)
+    def _log_to_window(self, record: str=""):
+        self.log_output.appendPlainText(record)
+        self._limit_size((2**10) * 100)
+
+    def _limit_size(self, maxsize: int=((2**10) * 3)):
+        length = len(self.log_output.toPlainText())
+
+        if length > maxsize:
+            self.log_output.setPlainText(self.log_output.toPlainText()[(length - maxsize):length])
+
     class WindowLogHandler(logging.Handler):
+        class QComObject(QObject):
+            logtowindow = pyqtSignal(str)
+
         def __init__(self, window):
             super(LogWindow.WindowLogHandler, self).__init__()
             self.window = window
             self.setFormatter(logging.Formatter("%(asctime)s [%(name)s] [%(levelname)s] -> %(message)s"))
+            self.qcom = LogWindow.WindowLogHandler.QComObject()
 
         def emit(self, record):
-            self.window.log_output.appendPlainText(self.format(record))
+            self.qcom.logtowindow.emit(self.format(record))
 
 def display_gui(argv):
     logger.debug("display_gui called with args: " + str(argv))

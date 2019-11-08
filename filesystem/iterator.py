@@ -170,6 +170,8 @@ class recursivecopy:
                             os.rmdir(destination)
                             removeddest = (os.path.exists(destination) == False)
                     else:
+                        logger.error(self._copy_fsobject.__qualname__ + ": Could not remove the target destination [\"" + \
+                            destination + "\"]")
                         operation_results.append(recursivecopy.PathNotWorkingError(message=r"""_copy_fsobject: on attempt of removing a destination
                         target path, I could not determine if it was a folder or a file.""", path=destination))
                         continue
@@ -184,6 +186,8 @@ class recursivecopy:
                     if not result[0]:
                         operation_results.append(result[1])
         else:
+            logger.error(self._copy_fsobject.__qualname__ + ": Source is neither a file nor a folder.  Source = [\"" + \
+                source_path + "\"]")
             operation_results.append(recursivecopy.PathNotWorkingError("Could not copy path because it was not a file or a folder!",  path=source_path))
         return operation_results
     
