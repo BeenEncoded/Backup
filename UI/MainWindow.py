@@ -76,6 +76,17 @@ class MainWindow(QMainWindow):
         Version: """ + str(VERSION))
 
 class LogWindow(QWidget):
+    '''
+    LogWindow is a window that adds a handler to the root logger that prints
+    to it.  Because the handler is added to the root logger, this object
+    should exist until the program's termination and not be destroyed or
+    the handler will be left referenced by the root logger.
+
+    To that end, LogWindow.allowclose is provided, a boolean that when False
+    hides the window when the closeEvent is intercepted.  Set it to true and
+    call .close() to actually close it when the program terminates, or when 
+    the parent window is closed.
+    '''
     def __init__(self, parent=None):
         super(LogWindow, self).__init__(parent)
         self.log_handler = LogWindow.WindowLogHandler(self)
@@ -116,13 +127,25 @@ class LogWindow(QWidget):
     @pyqtSlot(str)
     def _log_to_window(self, record: str=""):
         self.log_output.appendPlainText(record)
-        self._limit_size((2**10) * 100)
 
-    def _limit_size(self, maxsize: int=((2**10) * 3)):
+        #limit the size of the logfile to 300KB, minimum 100KB
+        self._limit_size(minsize=((2**10) * 100), maxsize=((2**10) * 300))
+
+    def _limit_size(self, minsize: int=((2**10) * 3), maxsize: int=((2**10) * 10)):
+        '''
+        limits the amount of information stored in the log window.
+        This is a very inefficient operation to perform, so minsize and maxsize are
+        provided so the user can define the smallest amount of information
+        that should be immediately available, and the maximum amount of information
+        that should be stored.
+
+        When maxsize is reached (defaults to 10KB) the logwindow's QPlainTextEdit's
+        plaintext is trimmed to just 3KB.
+        '''
         length = len(self.log_output.toPlainText())
 
         if length > maxsize:
-            self.log_output.setPlainText(self.log_output.toPlainText()[(length - maxsize):length])
+            self.log_output.setPlainText(self.log_output.toPlainText()[(length - minsize):length])
 
     class WindowLogHandler(logging.Handler):
         class QComObject(QObject):
