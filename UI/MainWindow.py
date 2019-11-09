@@ -55,6 +55,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         logger.debug("MainWindow closed.")
+        self.logwindow.allowclose = True
         self.logwindow.close()
 
     def _add_menubar(self):
@@ -84,21 +85,17 @@ class LogWindow(QWidget):
 
         logging.getLogger().addHandler(self.log_handler)
         self.setWindowTitle("LOGS")
+        self.allowclose = False
     
     def _layout(self):
-        self.setWindowFlag(Qt.WindowCloseButtonHint, False)
         mainlayout = QVBoxLayout()
 
         self.log_output = QPlainTextEdit()
-        self.closebutton = QPushButton("Close")
 
         self.log_output.setReadOnly(True)
         self.log_output.setLineWrapMode(QPlainTextEdit.NoWrap)
         
         mainlayout.addWidget(self.log_output)
-        closelayout = QHBoxLayout()
-        closelayout.addWidget(self.closebutton)
-        mainlayout.addLayout(closelayout)
         self.setLayout(mainlayout)
 
         uiconfig = CONFIG.config['ui']
@@ -106,12 +103,15 @@ class LogWindow(QWidget):
         self.setFont(QFont(str(uiconfig['font']), int(uiconfig['font_size'])))
     
     def _connect(self):
-        self.closebutton.clicked.connect(self._close_logwindow)
         self.log_handler.qcom.logtowindow.connect(self._log_to_window)
     
-    @pyqtSlot()
-    def _close_logwindow(self):
-        self.hide()
+    def closeEvent(self, event):
+        if self.allowclose:
+            logger.debug(self.closeEvent.__qualname__ + ": closing log window")
+            self.close()
+        else:
+            logger.debug(self.closeEvent.__qualname__ + ": hiding log window")
+            self.hide()
 
     @pyqtSlot(str)
     def _log_to_window(self, record: str=""):
