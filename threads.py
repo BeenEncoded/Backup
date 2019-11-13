@@ -43,12 +43,12 @@ class BackupThread(threading.Thread):
         self.stop = False
 
     def run(self):
-        logger.warning("BackupThread starting to run.")
+        logger.debug("BackupThread starting to run.")
         try:
             self.stop = False
             if len(self.backup["destinations"]) == 0:
                 self.raiseFinished()
-                logger.warning("No destination folders, doing nothing.")
+                logger.warning("No destination folders, doing nothing.  Backup thread terminating.")
                 return
             l = threading.local()
             l.source = self.backup["source"]
@@ -89,6 +89,7 @@ class BackupThread(threading.Thread):
         self.qcom.progress_update.emit(status)
     
     def raiseFinished(self):
+        logger.debug(self.raiseFinished.__qualname__ + ": backup thread is saying it's finished.")
         self.qcom.exec_finished.emit()
 
     def showError(self, error):
