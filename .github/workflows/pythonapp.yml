@@ -27,3 +27,6 @@ jobs:
     - name: Test with unittest
       run: |
         python ./unit_tests.py
+    -name: Running build
+      run: |
+        python3 -m PyInstaller --onefile -w -n backuplinux main.py
