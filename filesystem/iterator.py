@@ -202,12 +202,12 @@ class recursivecopy:
             destinations = [destinations]
         if not os.path.isfile(source):
             logger.warning("recursivecopy._copy_file: [\"" + source + "\"] path is not a file.")
-            return [[False, PathNotWorkingError("The source path argument is not a file!", source)]]
+            return [[False, recursivecopy.PathNotWorkingError("The source path argument is not a file!", source)]]
         for destination in destinations:
             if os.path.basename(source) != os.path.basename(destination):
                 logger.warning("recursivecopy._copy_file: Arguments invalid: " + \
                     "source: [\"" + source + "\"] destiations: [\"" + destination + "\"]")
-                return [[False, PathNotWorkingError(("The path arguments don't look right...  Here they are: \n" + source + "\n" + destination), destination)]]
+                return [[False, recursivecopy.PathNotWorkingError(("The path arguments don't look right...  Here they are: \n" + source + "\n" + destination), destination)]]
         
         #create results to store the results of the operation and 
         #initialize it to nothing.
