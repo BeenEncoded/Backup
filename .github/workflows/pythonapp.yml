@@ -27,4 +27,4 @@ jobs:
     - name: Test with unittest
       run: |
         ls -al
-        python unit_test.py
+        python ./unit_test.py
