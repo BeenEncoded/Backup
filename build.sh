@@ -1,1 +1,1 @@
-python3 -m PyInstaller --onefile -w -n backuplinux ./main.py
+python3 -m PyInstaller --onefile -w -n backuplinux ./src/main.py

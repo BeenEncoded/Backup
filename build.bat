@@ -1,1 +1,1 @@
-python.exe -m PyInstaller --clean --win-private-assemblies --onefile -w -n backupwindows .\main.py
+python.exe -m PyInstaller --clean --win-private-assemblies --onefile -w -n backupwindows .\src\main.py
