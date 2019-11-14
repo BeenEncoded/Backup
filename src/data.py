@@ -14,30 +14,36 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import json, os, configparser, dataclasses, typing, logging
+import json
+import os
+import configparser
+import dataclasses
+import logging
 
 logger = logging.getLogger("data")
+
 
 class Configuration:
     '''
     This helps to centralize all code relating to saving, storing, getting, and 
     initializing global program configuration.
     '''
+
     def __init__(self):
         logger.debug("Configuration instantiated.")
         super(Configuration, self).__init__()
 
-        #set up the configuration, initializing it with some sane defaults
+        # set up the configuration, initializing it with some sane defaults
         self.config = self._default_config()
 
-        #here we make sure that we search for a config file, and 
-        #if none is loaded we write it.
+        # here we make sure that we search for a config file, and
+        # if none is loaded we write it.
         if len(self.config.read(["backup.conf"])) == 0:
-            logger.warning("Configuration file not found, saving to " + \
-                (os.path.abspath(".") + os.path.sep + "backup.conf"))
+            logger.warning("Configuration file not found, saving to " +
+                           (os.path.abspath(".") + os.path.sep + "backup.conf"))
             self.save()
-    
-    #This function returns a default configuration.
+
+    # This function returns a default configuration.
     def _default_config(self):
         '''
         Returns the a default configuration for the entire program.
@@ -63,6 +69,7 @@ class Configuration:
         with open("backup.conf", 'w') as config_file:
             self.config.write(config_file)
 
+
 @dataclasses.dataclass
 class ProgramData:
     '''
@@ -75,9 +82,9 @@ class ProgramData:
     requires it for use in determining locations of files and such.
     '''
 
-    _config: Configuration=Configuration()
-    profiles: list=dataclasses.field(default_factory=list)
-    
+    _config: Configuration = Configuration()
+    profiles: list = dataclasses.field(default_factory=list)
+
     def load(self):
         logger.info("loading program data...")
         self._load_profiles()
@@ -97,15 +104,18 @@ class ProgramData:
     def _load_profiles(self):
         logger.debug("loading backup profiles...")
         self.profiles.clear()
-        self.profiles = BackupProfile.readjson(self._config['DEFAULT']['profilepath'])
-        #now we re-assign the ids because the json could have been edited by the luser...
+        self.profiles = BackupProfile.readjson(
+            self._config['DEFAULT']['profilepath'])
+        # now we re-assign the ids because the json could have been edited by the luser...
         BackupProfile.reassignAllIds(self.profiles)
         logger.debug("backup profiles loaded")
-    
+
     def _save_profiles(self):
         logger.debug("saving backup profiles")
-        BackupProfile.writejson(self.profiles, self._config['DEFAULT']['profilepath'])
+        BackupProfile.writejson(
+            self.profiles, self._config['DEFAULT']['profilepath'])
         logger.debug("backup profiles saved")
+
 
 @dataclasses.dataclass
 class BackupProfile:
@@ -116,8 +126,8 @@ class BackupProfile:
 
     def __str__(self):
         return "Name: " + self.name + \
-        "      Sources: " + str(self.sources) + \
-        "      Destinations: " + str(self.destinations)
+            "      Sources: " + str(self.sources) + \
+            "      Destinations: " + str(self.destinations)
 
     def assignID(self, profiles):
         logger.debug("Assigning a new id to backup profile: " + self.name)
@@ -126,7 +136,7 @@ class BackupProfile:
         while self.ID in ids:
             self.ID += 1
         logger.debug("New id for \"" + self.name + "\" is " + str(self.ID))
-    
+
     @staticmethod
     def getById(profiles, id):
         '''
@@ -156,10 +166,11 @@ class BackupProfile:
         Writes a list of BackupProfile to a filename
         '''
         with open(filename, 'w') as file:
-            return json.dump(\
-            [{"name": p.name, "sources": p.sources, "destinations": p.destinations, "id": p.ID} for p in profiles], \
+            return json.dump(
+                [{"name": p.name, "sources": p.sources,
+                    "destinations": p.destinations, "id": p.ID} for p in profiles],
                 fp=file, indent=4, sort_keys=True)
-    
+
     @staticmethod
     def readjson(filename):
         '''
@@ -172,6 +183,6 @@ class BackupProfile:
                 return [_profile_from_dict(entry) for entry in x]
         return []
 
-def _profile_from_dict(profile: dict={"name": "", "sources": [], "destinations": [], "id": 0}) -> BackupProfile:
-    return BackupProfile(profile["name"], profile["sources"], profile["destinations"], profile["id"])
 
+def _profile_from_dict(profile: dict = {"name": "", "sources": [], "destinations": [], "id": 0}) -> BackupProfile:
+    return BackupProfile(profile["name"], profile["sources"], profile["destinations"], profile["id"])

@@ -14,12 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSlot, QRect, QObject, pyqtSignal
+from PyQt5.QtWidgets import QMainWindow, QShortcut, QMessageBox, QPlainTextEdit
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QApplication
+from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
 from PyQt5.QtGui import QFont, QKeySequence
 
-from UI.MainWindowWidgets import EditBackupProfileWidget, ManageBackupsWidget
-from globaldata import *
+from UI.MainWindowWidgets import ManageBackupsWidget
+from globaldata import CONFIG, VERSION
 import logging
 
 logger = logging.getLogger("UI.MainWindow")
@@ -163,5 +164,5 @@ class LogWindow(QWidget):
 def display_gui(argv):
     logger.debug("display_gui called with args: " + str(argv))
     app = QApplication(argv)
-    window = MainWindow(None)
+    window = MainWindow(None) # noqa F841
     return app.exec()

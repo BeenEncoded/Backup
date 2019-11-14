@@ -14,13 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import os, queue, typing, logging
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QRect, pyqtSlot, pyqtSignal
+import os, typing, logging
+
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton
+from PyQt5.QtWidgets import QLineEdit, QGroupBox, QLabel, QFileDialog, QAbstractItemView
+from PyQt5.QtWidgets import QTreeView, QListView, QFileSystemModel, QComboBox, QPlainTextEdit
+from PyQt5.QtWidgets import QMessageBox, QScrollArea, QProgressBar
+from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
 from PyQt5.QtGui import QFont
 
 from data import BackupProfile
-from globaldata import *
+from globaldata import PDATA, CONFIG
 from errors import BackupProfileNotFoundError
 from threads import BackupThread, ProcessStatus
 from filesystem.iterator import recursivecopy
@@ -133,7 +137,6 @@ class EditBackupProfileWidget(QWidget):
         self.sources_listbox.currentRowChanged.connect(self._set_enabled_buttons)
 
     def _directory_dialog(self, title="Select a Directory"):
-        global CONFIG
         uiconfig = CONFIG.config['ui']
         fdiag = QFileDialog(parent=self, caption=title)
         fdiag.setFileMode(QFileDialog.DirectoryOnly)

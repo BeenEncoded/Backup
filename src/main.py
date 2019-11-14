@@ -16,9 +16,8 @@
 
 import sys, atexit, os
 from UI.MainWindow import display_gui
-from globaldata import *
-from data import BackupProfile
 from logging.handlers import RotatingFileHandler
+from globaldata import PDATA, LOGS_FOLDER, CONFIG, LOG_LEVEL, LOGFILE
 import logging
 
 def setup_logging():
@@ -58,6 +57,6 @@ if __name__ == "__main__":
     returnvalue = -1
     try:
         returnvalue = display_gui(sys.argv)
-    except:
+    except: # noqa E722
         logging.getLogger().exception("CRITICAL EXCEPTION")
     sys.exit(returnvalue)

@@ -14,11 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSignal, QObject
-from PyQt5.QtGui import QFont
-
-from data import BackupProfile
+from PyQt5.QtCore import pyqtSignal, QObject
 from filesystem.iterator import recursive, recursivecopy, copypredicate
 
 import dataclasses, threading, logging
@@ -77,7 +73,7 @@ class BackupThread(threading.Thread):
                 l.status.percent = ((l.sources_copied * 100) / l.sources_count)
                 self.updateProgress(l.status)
             self.raiseFinished()
-        except:
+        except: # noqa E722
             logger.critical("Uncaught exception in a backup thread!")
             logger.exception("CRITICAL EXCEPTION; " + str(self.backup))
             self.raiseFinished()
