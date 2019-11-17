@@ -132,8 +132,6 @@ class recursivecopy:
     # errors are returned as an array of exceptions
     # Returns:
     # [UnexpectedError]
-    # None if nothing was copied at all.  This can happen if the predicate returns false, or
-    #      No destinations are specified.
     def _copy_fsobject(self, source_path: str, destination_folders: list):
         if len(destination_folders) == 0:
             return [recursivecopy.NothingWasDoneError("Destination folders had a length of zero.  Returned from \
