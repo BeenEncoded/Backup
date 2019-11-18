@@ -17,7 +17,7 @@
 import unittest
 import os
 import shutil
-from filesystem.iterator import recursive, recursivecopy, ischild, split_path, copypredicate
+from iterator import recursive, recursivecopy, ischild, split_path, copypredicate
 from tqdm import tqdm
 
 

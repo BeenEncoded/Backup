@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from PyQt5.QtCore import pyqtSignal, QObject
-from filesystem.iterator import recursive, recursivecopy, copypredicate
+from iterator import recursive, recursivecopy, copypredicate
 
 import dataclasses, threading, logging
 

@@ -27,7 +27,7 @@ from data import BackupProfile
 from globaldata import PDATA, CONFIG
 from errors import BackupProfileNotFoundError
 from threads import BackupThread, ProcessStatus
-from filesystem.iterator import recursivecopy
+from iterator import recursivecopy
 
 logger = logging.getLogger("UI.MainWindowWidgets")
 
