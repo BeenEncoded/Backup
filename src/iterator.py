@@ -256,12 +256,18 @@ class recursivecopy:
         # perform the writing operation.
         haveread = False
         logger.info("Copying [\"" + source + "\"] -> " + str(destinations))
+
+        sourcesize = os.stat(source).st_size
+        read_blocksize = ((2**20) * 10) # 10 megabytes
+        if(sourcesize > (2**30)):
+            logger.warning("Largefile, will take some time.")
+        
         while len(dest_files) > 0:
             # read once from the source, and write that data to each destination stream.
             # this should ease the stress of the operation on the drive.
 
             try:
-                data = sourcefile.read()
+                data = sourcefile.read(read_blocksize)
             except PermissionError as e:
                 logger.exception("PermissionError; source=\"" + source + "\"")
                 for result in results:
@@ -280,6 +286,10 @@ class recursivecopy:
                 if dest_files[x].write(data) == len(data):
                     results[x][0] = True
                     results[x][1] = None
+
+                    #if we have a large file, log the progress
+                    if (sourcesize > 2**30) and ((int((sourcefile.tell() / sourcesize) * 100) % 10) == 0):
+                        logger.warning("Largefile copy: %" + str((sourcefile.tell() / sourcesize) * 100))
                 else:
                     logger.error("Failed to write all the data.  Length of data: " + str(len(data)) + ", " +
                                  "destination: [\"" + destinations[x] + "\"]  Source: [\"" + source + "\"]")
