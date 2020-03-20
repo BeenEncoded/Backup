@@ -31,7 +31,22 @@ from iterator import recursivecopy
 
 logger = logging.getLogger("UI.MainWindowWidgets")
 
+def add_to_list(ob, src):
+    '''
+    Adds objects in src to ob, but only if they do not exist in ob.
+    '''
+    if ob is not None and src is not None:
+        if not isinstance(src, list):
+            src = [src]
+        for entry in src:
+            if entry not in ob:
+                ob.append(entry)
+
 class EditBackupProfileWidget(QWidget):
+    '''
+    CentralWidget:
+        Edits a backup profile.
+    '''
     def __init__(self, par, profile_id):
         '''
         Initializes this window to edit a backup profile.  Make sure that an
@@ -65,37 +80,11 @@ class EditBackupProfileWidget(QWidget):
         temp_hbox.addWidget(self.name_tbox)
         mainlayout.addLayout(temp_hbox)
 
-        #A list box labeled with a groupbox for editing the list of source folders
-        self.sources_groupbox = QGroupBox("Source Folders:")
-        sources_gbox_layout = QVBoxLayout()
-        self.sources_listbox = QListWidget()
-        sources_gbox_layout.addWidget(self.sources_listbox)
-        sources_buttons = QHBoxLayout()
-        self.sources_add_button = QPushButton()
-        self.sources_del_button = QPushButton()
-        self.sources_add_button.setText("Add")
-        self.sources_del_button.setText("Delete")
-        sources_buttons.addWidget(self.sources_add_button)
-        sources_buttons.addWidget(self.sources_del_button)
-        sources_gbox_layout.addLayout(sources_buttons)
-        self.sources_groupbox.setLayout(sources_gbox_layout)
-        mainlayout.addWidget(self.sources_groupbox)
-
-        #a list box labeled with a groupbox for editing the list of destination folders.
-        self.destinations_groupbox = QGroupBox("Destination Folders:")
-        dests_gbox_layout = QVBoxLayout()
-        self.destinations_listbox = QListWidget()
-        dests_gbox_layout.addWidget(self.destinations_listbox)
-        self.destinations_add_button = QPushButton()
-        self.destinations_del_button = QPushButton()
-        self.destinations_add_button.setText("Add")
-        self.destinations_del_button.setText("Delete")
-        dbuttons_layout = QHBoxLayout()
-        dbuttons_layout.addWidget(self.destinations_add_button)
-        dbuttons_layout.addWidget(self.destinations_del_button)
-        dests_gbox_layout.addLayout(dbuttons_layout)
-        self.destinations_groupbox.setLayout(dests_gbox_layout)
-        mainlayout.addWidget(self.destinations_groupbox)
+        #source and destination editing:
+        listeditlayout = QHBoxLayout()
+        listeditlayout.addWidget(EditPathListWidget(self._profile.sources, "Sources", self))
+        listeditlayout.addWidget(EditPathListWidget(self._profile.destinations, "Destinations", self))
+        mainlayout.addLayout(listeditlayout)
 
         # Buttons to save, delete, and cancel the backup profile
         finalbuttons_layout = QHBoxLayout()
@@ -113,73 +102,17 @@ class EditBackupProfileWidget(QWidget):
     
     def _apply_profile_to_fields(self):
         self.name_tbox.setText(self._profile.name)
-        self.sources_listbox.clear()
-        self.destinations_listbox.clear()
-        self.sources_listbox.addItems(self._profile.sources)
-        self.destinations_listbox.addItems(self._profile.destinations)
 
     def _connect_handlers(self):
-        self.sources_add_button.clicked.connect(self._prompt_to_add_source_folders)
-        self.destinations_add_button.clicked.connect(self._prompt_to_add_destination_folders)
-        self.sources_del_button.clicked.connect(self._delete_selected_source)
-        self.destinations_del_button.clicked.connect(self._delete_selected_destination)
         self.name_tbox.textChanged.connect(self._set_profile_name)
         self.finish_editing_button.clicked.connect(self._finish_editing_profile)
         self.cancel_edit_button.clicked.connect(self._cancel_edit)
         self.delete_profile_button.clicked.connect(self._delete_backup_profile)
 
-        #listbox: these signals are used to update whether buttons are enabled.
-        self.destinations_listbox.itemSelectionChanged.connect(self._set_enabled_buttons)
-        self.destinations_listbox.itemClicked.connect(self._set_enabled_buttons)
-        self.destinations_listbox.currentRowChanged.connect(self._set_enabled_buttons)
-        self.sources_listbox.itemSelectionChanged.connect(self._set_enabled_buttons)
-        self.sources_listbox.itemClicked.connect(self._set_enabled_buttons)
-        self.sources_listbox.currentRowChanged.connect(self._set_enabled_buttons)
-
-    def _directory_dialog(self, title="Select a Directory"):
-        uiconfig = CONFIG.config['ui']
-        fdiag = QFileDialog(parent=self, caption=title)
-        fdiag.setFileMode(QFileDialog.DirectoryOnly)
-        fdiag.setDirectory(os.path.abspath("/"))
-        fdiag.setAcceptDrops(False)
-        fdiag.setFont(QFont(uiconfig['font'], int(uiconfig['font_size'])))
-        fdiag.setWindowTitle(title)
-        fdiag.setViewMode(QFileDialog.Detail)
-        fdiag.setModal(True)
-        fdiag.setOption(QFileDialog.DontUseNativeDialog, True)
-
-        for v in fdiag.findChildren((QListView, QTreeView)):
-            if isinstance(v.model(), QFileSystemModel):
-                v.setSelectionMode(QAbstractItemView.MultiSelection)
-
-        if fdiag.exec():
-            return fdiag.selectedFiles()
-        return []
-
-    @pyqtSlot()
-    def _prompt_to_add_source_folders(self):
-        self._add_to_list(self._profile.sources, self._directory_dialog("Select Sources to Backup"))
-        self._apply_profile_to_fields()
-    
-    @pyqtSlot()
-    def _prompt_to_add_destination_folders(self):
-        self._add_to_list(self._profile.destinations, self._directory_dialog("Select Destinations to Target"))
-        self._apply_profile_to_fields()
-    
     @pyqtSlot()
     def _set_profile_name(self):
         self._profile.name = self.name_tbox.text()
 
-    @pyqtSlot()
-    def _delete_selected_source(self):
-        self._remove_selected_item_from_list(self.sources_listbox, self._profile.sources)
-        self._apply_profile_to_fields()
-    
-    @pyqtSlot()
-    def _delete_selected_destination(self):
-        self._remove_selected_item_from_list(self.destinations_listbox, self._profile.destinations)
-        self._apply_profile_to_fields()
-    
     @pyqtSlot()
     def _delete_backup_profile(self):
         logger.warning("delete button clicked")
@@ -221,29 +154,149 @@ class EditBackupProfileWidget(QWidget):
 
     @pyqtSlot()
     def _set_enabled_buttons(self):
-        self.sources_del_button.setEnabled(len(self.sources_listbox.selectedItems()) > 0)
-        self.destinations_del_button.setEnabled(len(self.destinations_listbox.selectedItems()) > 0)
         self.delete_profile_button.setEnabled(BackupProfile.getById(PDATA.profiles, self._profile.ID) is not None)
 
-    def _remove_selected_item_from_list(self, listwidget, listob):
-        '''
-        removes an item from the list widget and an associated list object.
-        '''
-        if len(listwidget.selectedItems()) > 0:
-            listob.pop(listwidget.currentRow())
+class EditPathListWidget(QWidget):
+    '''
+    Sub-widget
+    '''
+    def __init__(self, pathlist: list=None, listname: str="Paths", parent=None):
+        super(EditPathListWidget, self).__init__(parent)
+        self.listname = listname
+        self._data = pathlist
+        self._layout()
+        self._handlers()
+        self._applyfields()
+    
+    def _layout(self) -> None:
+        self.mainlayout = QVBoxLayout()
 
-    def _add_to_list(self, ob, src):
+        #a list box labeled with a groupbox for editing the list of destination folders.
+        self.destinations_groupbox = QGroupBox("Destination Folders:")
+        dests_gbox_layout = QVBoxLayout()
+
+        textboxlayout = QHBoxLayout()
+        self.directorytextbox = QLineEdit()
+        self.entertextbutton = QPushButton("Apply")
+        textboxlayout.addWidget(self.directorytextbox)
+        textboxlayout.addWidget(self.entertextbutton)
+        dests_gbox_layout.addLayout(textboxlayout)
+
+        self.listbox = QListWidget()
+        dests_gbox_layout.addWidget(self.listbox)
+        self.add_button = QPushButton("Add")
+        self.del_button = QPushButton("Delete")
+        dbuttons_layout = QHBoxLayout()
+        dbuttons_layout.addWidget(self.add_button)
+        dbuttons_layout.addWidget(self.del_button)
+        dests_gbox_layout.addLayout(dbuttons_layout)
+        self.destinations_groupbox.setLayout(dests_gbox_layout)
+        self.mainlayout.addWidget(self.destinations_groupbox)
+        self.setLayout(self.mainlayout)
+
+    def _handlers(self) -> None:
+        self.listbox.itemSelectionChanged.connect(self._set_enabled_buttons)
+        self.listbox.itemClicked.connect(self._set_enabled_buttons)
+        self.listbox.currentRowChanged.connect(self._set_enabled_buttons)
+
+        self.directorytextbox.textEdited.connect(self._editdirectory)
+        self.directorytextbox.returnPressed.connect(self._apply_edit)
+        self.entertextbutton.clicked.connect(self._apply_edit)
+
+        self.add_button.clicked.connect(self._add_paths)
+        self.del_button.clicked.connect(self._remove_selected_path)
+
+    def _applyfields(self) -> None:
         '''
-        Adds objects in src to ob, but only if they do not exist in ob.
+        Updates the UI to reflect changes to the data being stored.
+        Usually performed after a change (edit from a textbox is 'applied', etc...)
         '''
-        if ob is not None and src is not None:
-            if not isinstance(src, list):
-                src = [src]
-            for entry in src:
-                if entry not in ob:
-                    ob.append(entry)
+        self.listbox.clear()
+        self.listbox.addItems(self._data)
+        self._set_enabled_buttons()
+
+    def _directory_dialog(self, title="Select Paths:"):
+        uiconfig = CONFIG.config['ui']
+        fdiag = QFileDialog(parent=self, caption=title)
+        fdiag.setFileMode(QFileDialog.DirectoryOnly)
+        fdiag.setDirectory(os.path.abspath("/"))
+        fdiag.setAcceptDrops(False)
+        fdiag.setFont(QFont(uiconfig['font'], int(uiconfig['font_size'])))
+        fdiag.setWindowTitle(title)
+        fdiag.setViewMode(QFileDialog.Detail)
+        fdiag.setModal(True)
+        fdiag.setOption(QFileDialog.DontUseNativeDialog, True)
+
+        for v in fdiag.findChildren((QListView, QTreeView)):
+            if isinstance(v.model(), QFileSystemModel):
+                v.setSelectionMode(QAbstractItemView.MultiSelection)
+
+        if fdiag.exec():
+            return fdiag.selectedFiles()
+        return []
+
+    @pyqtSlot()
+    def _apply_edit(self) -> None:
+        if len(self.listbox.selectedItems()) > 0:
+            if self.listbox.currentRow() < len(self._data):
+                self._data[self.listbox.currentRow()] = self.directorytextbox.text()
+                self._applyfields()
+            else:
+                row = self.listbox.currentRow() # noqa: F841
+                size = len(self._data) # noqa: F841
+                logger.error("listbox.currentRow >= len(self._data)!!  Currentrow: {row} size of _data (pathlist): {size}")
+        else:
+            logger.warning("{EditPathListWidget._apply_edit.__qualname__}: called with nothing selected in the list!!  WHY?!?!?!")
+
+    @pyqtSlot(str)
+    def _editdirectory(self, text: str="") -> None:
+        if len(self.listbox.selectedItems()) > 0:
+            if self.listbox.currentRow() < len(self._data):
+                self.entertextbutton.setEnabled(self.directorytextbox.text() != self._data[self.listbox.currentRow()])
+            else:
+                row = self.listbox.currentRow() # noqa: F841
+                size = len(self._data) # noqa: F841
+                logger.error("listbox.currentRow >= len(self._data)!!  Currentrow: {row} size of _data (pathlist): {size}")
+        else:
+            logger.warning("{EditPathListWidget._editdirectory.__qualname__}: called with nothing selected in the list!!  WHY?!?!?!")
+
+    @pyqtSlot()
+    def _add_paths(self):
+        self._data.append(self._directory_dialog(self.listname))
+        self._applyfields()
+    
+    @pyqtSlot()
+    def _remove_selected_path(self) -> None:
+        if len(self.listbox.selectedItems()) > 0:
+            index = self.listbox.currentRow()
+            if len(self._data) > 0 and (index < len(self._data)):
+                self._data.pop(index)
+                logger.debug("Removed item at position " + str(index))
+            else:
+                #printing relevant errors... this should not happen, but just in case
+                #we will want to know what happened.
+                if len(self._data) <= 0:
+                    logger.error("Failed to remove item: pathlist is empty!")
+                elif index >= len(self._data):
+                    logger.error("Failed to remove item: index " + str(index) + 
+                        " is greater than the size of the pathlist (" + str(len(self._data)) + ")")
+            #now that the element was removed, we update the ui to
+            #reflect the changes.
+            self._applyfields()
+
+    @pyqtSlot()
+    def _set_enabled_buttons(self):
+        itemselected = (len(self.listbox.selectedItems()) > 0)
+        self.del_button.setEnabled(itemselected)
+        self.directorytextbox.setEnabled(itemselected)
+        self.entertextbutton.setEnabled(False)
+        self.directorytextbox.setText(self._data[self.listbox.currentRow()] if itemselected else "")
 
 class ManageBackupsWidget(QWidget):
+    '''
+    CentralWidget:
+        Manages backups
+    '''
     def __init__(self, parent):
         global PDATA
 
