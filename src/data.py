@@ -43,6 +43,12 @@ class Configuration:
                            (os.path.abspath(".") + os.path.sep + "backup.conf"))
             self.save()
 
+    def __getitem__(self, key):
+        return self.config[key]
+
+    def __setitem__(self, key, value):
+        self.config[key] = value
+
     # This function returns a default configuration.
     def _default_config(self):
         '''
@@ -69,6 +75,13 @@ class Configuration:
         with open("backup.conf", 'w') as config_file:
             self.config.write(config_file)
 
+    def __repr__(self):
+        some_stuff = []
+        for key in self.config:
+            some_stuff.append(str(key))
+            for values in self.config[key]:
+                some_stuff.append(repr(values))
+        return os.linesep.join(some_stuff)
 
 @dataclasses.dataclass
 class ProgramData:
