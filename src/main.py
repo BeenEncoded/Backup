@@ -60,10 +60,10 @@ def onexit():
 if __name__ == "__main__":
     PDATA.load()
     setup_logging()
-    logging.getLogger("main").info("[PROGRAM START]")
-    logging.getLogger("main").debug(
-        "Configuration: " + str(CONFIG.config._sections))
-    logging.getLogger("main").debug("ProgramData: " + str(PDATA))
+    logger = logging.getLogger(__name__)
+    logger.info("[PROGRAM START]")
+    logger.debug("Configuration: " + repr(CONFIG))
+    logger.debug("ProgramData: " + str(PDATA))
 
     atexit.register(onexit)
 
