@@ -359,7 +359,7 @@ class recursivecopy:
 
     class UnexpectedError:
         '''
-        An unexpected error...  This is no an exception class.  It represents data returned after an operation
+        An unexpected error...  This is not an exception class.  It represents data returned after an operation
         fails with unexpected results.
         '''
 
@@ -438,11 +438,48 @@ class copypredicate:
             return os.path.getmtime(source) > os.path.getmtime(destination)
         return True
 
+class recursiveprune:
+    '''
+    An iterator that can be used to prune a destination directory after a recursive copy.
+    This is important because there can be files left over after repeated copies
+    that don't exist in the source anymore.
+
+    This iterator ONLY iterates over paths that exist in the destination, but not in
+    the source.  It does not do any deleting.  Moreover, it does not get invalidated
+    when a path is removed.  It gathers all paths to delete on construction,
+    so iteration happens without a dependency on filesystem state.
+    '''
+    def __init__(self, source, destination):
+        self.source = source
+        self.destination = destination
+        self.current = None
+        self.todelete = []
+        for element in recursive(destination):
+            if not self._dest_in_source(element):
+                self.todelete.append(element)
+        self.iter = iter(self.todelete)
+    
+    def __iter__(self):
+        return self
+    
+    def __next__(self):
+        self.current = next(self.iter)
+        return self.current
+    
+    def _dest_in_source(self, subdir) -> bool:
+        newsource = os.path.join(self.source, split_path(self.destination, subdir)[1])
+        if os.path.islink(subdir):
+            return os.path.islink(newsource)
+        if os.path.isfile(subdir):
+            return (os.path.isfile(newsource) and not os.path.islink(newsource))
+        if os.path.isdir(subdir):
+            return (os.path.isdir(newsource) and not os.path.islink(newsource))
+        return False
+
 # /c/abc
 # /c/abc/abc1/bac3
 #  V
 # ['/c/abc', 'abc1/bac3']
-
 
 def split_path(parent: str, child: str) -> typing.Tuple[str, str]:
     if not os.path.isabs(parent):
