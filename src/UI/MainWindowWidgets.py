@@ -262,7 +262,7 @@ class EditPathListWidget(QWidget):
 
     @pyqtSlot()
     def _add_paths(self):
-        self._data.append(self._directory_dialog(self.listname))
+        self._data += self._directory_dialog(self.listname)
         self._applyfields()
     
     @pyqtSlot()
