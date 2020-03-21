@@ -13,15 +13,9 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-import sys
-import atexit
-import os
-from UI.MainWindow import display_gui
+import logging, os, sys
 from logging.handlers import RotatingFileHandler
-from globaldata import PDATA, LOGS_FOLDER, CONFIG, LOG_LEVEL, LOGFILE
-import logging
-
+from globaldata import LOGFILE, LOGS_FOLDER, LOG_LEVEL
 
 def setup_logging():
     if not os.path.exists(LOGS_FOLDER):
@@ -48,18 +42,23 @@ def setup_logging():
     root.setLevel(LOG_LEVEL)
     root.info("log level: " + str(LOG_LEVEL))
 
+setup_logging()
+logger = logging.getLogger(__name__)
+
+import atexit
+from UI.MainWindow import display_gui
+from globaldata import PDATA, CONFIG
+
 
 def onexit():
     global CONFIG
     global PDATA
     CONFIG.save()
     PDATA.save()
-    logging.getLogger().info("[PROGRAM END]")
+    logger.info("[PROGRAM END]")
 
 if __name__ == "__main__":
     PDATA.load()
-    setup_logging()
-    logger = logging.getLogger(__name__)
     logger.info("[PROGRAM START]")
     logger.debug("Configuration: " + repr(CONFIG))
     logger.debug("ProgramData: " + str(PDATA))
