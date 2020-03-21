@@ -66,7 +66,9 @@ class Configuration:
             "font": "monospaced"
         }
 
-        c['BackupBehavior'] = {}
+        c['BackupBehavior'] = {
+            "threadcount": 3
+        }
 
         return c
 
