@@ -18,7 +18,7 @@ import unittest
 
 #Test Cases:
 from projecttests.filesystem import IterationTestCase # noqa: F401
-# from projecttests.data import DataTestCase # noqa: F401
+from projecttests.data import DataTestCase # noqa: F401
 # from projecttests.misc import MiscTestCase # noqa: F401
 
 if __name__ == "__main__":

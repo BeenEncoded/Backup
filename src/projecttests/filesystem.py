@@ -41,7 +41,7 @@ class IterationTestCase(unittest.TestCase):
         for i in recursiveprune(r"D:\beene", r"G:\legion\03152020\d\beene"):
             print(i)
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_recursion(self):
         count = 0
         print("Testing Recursion: ")
@@ -49,7 +49,7 @@ class IterationTestCase(unittest.TestCase):
             count += 1
         self.assertEqual((count > 0), True)
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_split_path(self):
         print("Testing split_path")
         for entry in tqdm(recursive(self.iteration_path), total=self.iteration_path_count):
@@ -57,14 +57,14 @@ class IterationTestCase(unittest.TestCase):
                 self.assertEqual(entry, os.path.join(split_path(self.iteration_path, entry)[
                                  0], split_path(self.iteration_path, entry)[1]))
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_ischild(self):
         print("Testing ischild")
         for entry in tqdm(recursive(self.iteration_path), total=self.iteration_path_count):
             if entry != self.iteration_path:
                 self.assertEqual(ischild(self.iteration_path, entry), True)
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_recursivecopy_initialization(self):
         print("testing recursive copy initialization")
         invalid_destinations = [os.path.abspath("../../../.."),
