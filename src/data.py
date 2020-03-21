@@ -78,9 +78,8 @@ class Configuration:
     def __repr__(self):
         some_stuff = []
         for key in self.config:
-            some_stuff.append(str(key))
-            for values in self.config[key]:
-                some_stuff.append(repr(values))
+            some_stuff.append(f"SECTION[{key}]")
+            some_stuff += [f"{x}: {self.config[key][x]}" for x in self.config[key]]
         return os.linesep.join(some_stuff)
 
 @dataclasses.dataclass
