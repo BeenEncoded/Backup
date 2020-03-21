@@ -15,9 +15,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from PyQt5.QtCore import pyqtSignal, QObject
-from iterator import recursive, recursivecopy, copypredicate
+from iterator import recursive, recursivecopy, copypredicate, recursiveprune
 
-import dataclasses, threading, logging, queue, time
+import dataclasses, threading, logging, queue, time, shutil
 
 logger = logging.getLogger("threads")
 
@@ -240,6 +240,42 @@ class BackupThread(threading.Thread):
             logger.exception("CRITICAL EXCEPTION; " + str(self.backup))
             self.raiseFinished()
     
+    def _pruneDestination(self, source: str="", destination: str="") -> int:
+        '''
+        Prunes the destination.
+        Returns the number of file objects a delete was executed on successfully.
+        Folders count as 1.  rmtree is used on those.
+        '''
+        self.qcom.progress_update(ProcessStatus(percent=100.00, message="Pruning Destination..."))
+        deletecount = 0
+        if self.stop:
+            return 0
+        for element in recursiveprune(source, destination):
+            if self.stop:
+                break
+            if not self._deletePath(element):
+                logger.error(f"Prune: could not delete \"{element}\"")
+            else:
+                deletecount += 1
+            if self.stop:
+                break
+        return deletecount
+    
+    def _deletePath(self, path: str="") -> bool:
+        if not os.path.exists(path):
+            return True
+        if os.path.islink(path) or os.path.isfile(path):
+            os.remove(path)
+        elif os.path.isdir(path):
+            shutil.rmtree(path, onerror=self.rmtree_onError)
+        return not os.path.exists(path)
+
+    def rmtree_onError(self, function, path, excinfo) -> None:
+        self.showError("rmtree: I don't know what heppened... Here's some data:" + os.linesep + 
+            f"function: {str(function)}" + os.linesep + 
+            f"path: \"{path}\"" + os.linesep + 
+            f"excinfo: {str(excinfo)}")
+
     def updateProgress(self, status: ProcessStatus):
         '''
         ##pyqtSignal: Emits a signal to update progress of the backup's process.
