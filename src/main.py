@@ -56,7 +56,6 @@ def onexit():
     PDATA.save()
     logging.getLogger().info("[PROGRAM END]")
 
-
 if __name__ == "__main__":
     PDATA.load()
     setup_logging()
