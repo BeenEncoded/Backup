@@ -17,7 +17,7 @@
 from PyQt5.QtCore import pyqtSignal, QObject
 from iterator import recursive, recursivecopy, copypredicate, recursiveprune
 
-import dataclasses, threading, logging, queue, time, shutil
+import dataclasses, threading, logging, queue, time, shutil, os
 
 logger = logging.getLogger("threads")
 
@@ -234,6 +234,12 @@ class BackupThread(threading.Thread):
                 l.status.message = self._display_string(iterator.current)
                 l.status.percent = ((l.sources_copied * 100) / l.sources_count)
                 self.updateProgress(l.status)
+            
+            for dest in l.destinations:
+                l.status.message = f"Pruning \"{dest}\""
+                self.updateProgress(l.status)
+                self._pruneDestination(l.source, dest)
+            
             self.raiseFinished()
         except: # noqa E722
             logger.critical("Uncaught exception in a backup thread!")
@@ -246,7 +252,6 @@ class BackupThread(threading.Thread):
         Returns the number of file objects a delete was executed on successfully.
         Folders count as 1.  rmtree is used on those.
         '''
-        self.qcom.progress_update(ProcessStatus(percent=100.00, message="Pruning Destination..."))
         deletecount = 0
         if self.stop:
             return 0
@@ -256,6 +261,7 @@ class BackupThread(threading.Thread):
             if not self._deletePath(element):
                 logger.error(f"Prune: could not delete \"{element}\"")
             else:
+                self.updateProgress(ProcessStatus(percent=100, message=f"Deleted \"{element}\""))
                 deletecount += 1
             if self.stop:
                 break
@@ -271,10 +277,12 @@ class BackupThread(threading.Thread):
         return not os.path.exists(path)
 
     def rmtree_onError(self, function, path, excinfo) -> None:
-        self.showError("rmtree: I don't know what heppened... Here's some data:" + os.linesep + 
+        errormessage = ("rmtree: I don't know what heppened... Here's some data:" + os.linesep + 
             f"function: {str(function)}" + os.linesep + 
             f"path: \"{path}\"" + os.linesep + 
             f"excinfo: {str(excinfo)}")
+        self.showError(recursivecopy.UnexpectedError(message=errormessage))
+        logger.error(errormessage)
 
     def updateProgress(self, status: ProcessStatus):
         '''
