@@ -262,6 +262,7 @@ class BackupThread(threading.Thread):
                 logger.error(f"Prune: could not delete \"{element}\"")
             else:
                 self.updateProgress(ProcessStatus(percent=100, message=f"Deleted \"{element}\""))
+                logger.warning(f"Deleted while pruning: \"{element}\"")
                 deletecount += 1
             if self.stop:
                 break
