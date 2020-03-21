@@ -454,7 +454,10 @@ class recursiveprune:
         self.destination = destination
         self.current = None
         self.todelete = []
-        for element in recursive(destination):
+        self.destination = os.path.join(self.destination, os.path.basename(source))
+        for element in recursive(self.destination):
+            if element == self.destination:
+                continue
             if not self._dest_in_source(element):
                 self.todelete.append(element)
         self.iter = iter(self.todelete)
