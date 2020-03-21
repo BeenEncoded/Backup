@@ -120,6 +120,7 @@ class LogWindow(QWidget):
     def closeEvent(self, event):
         if self.allowclose:
             logger.debug(self.closeEvent.__qualname__ + ": closing log window")
+            logging.getLogger().removeHandler(self.log_handler)
             self.close()
         else:
             logger.debug(self.closeEvent.__qualname__ + ": hiding log window")
