@@ -26,7 +26,7 @@ from PyQt5.QtGui import QFont
 from data import BackupProfile
 from globaldata import PDATA, CONFIG
 from errors import BackupProfileNotFoundError
-from threads import BackupThread, ProcessStatus
+from threads import BackupThread, ProcessStatus, ThreadManager
 from iterator import recursivecopy
 
 logger = logging.getLogger("UI.MainWindowWidgets")
@@ -262,7 +262,7 @@ class EditPathListWidget(QWidget):
 
     @pyqtSlot()
     def _add_paths(self):
-        self._data += self._directory_dialog(self.listname)
+        add_to_list(self._data, self._directory_dialog(self.listname))
         self._applyfields()
     
     @pyqtSlot()
@@ -370,11 +370,18 @@ class ExecuteBackupWidget(QWidget):
         self.backup = backup
         self.executions = []
 
+        self.threadmanager = ThreadManager(int(CONFIG["BackupBehavior"]["threadcount"]))
+        self.threadmanager.throttle = 20
+        self.threadmanager.start()
+
         self._init_layout()
         self._connect_handlers()
         
         for e in self.executions:
             e.startExecution()
+    
+    def __del__(self) -> None:
+        self.threadmanager.halt_thread()
 
     def _init_layout(self):
         self.mainlayout = QVBoxLayout()
@@ -455,7 +462,7 @@ class ExecuteBackupWidget(QWidget):
         if (len(valid_sources) > 0) and (len(valid_destinations) > 0):
             gblayout.addWidget(self._label_list("Destinations: ", valid_destinations))
             for entry in valid_sources:
-                self.executions.append(QBackupExecution(self, {"source": entry, "destinations": valid_destinations}))
+                self.executions.append(QBackupExecution(self, {"source": entry, "destinations": valid_destinations}, self.threadmanager))
                 gblayout.addWidget(self.executions[(len(self.executions) - 1)])
         else:
             if len(valid_sources) == 0:
@@ -505,11 +512,12 @@ class ExecuteBackupWidget(QWidget):
 class QBackupExecution(QWidget):
     removeself = pyqtSignal()
 
-    def __init__(self, parent, backup={"source": "", "destinations": []}):
+    def __init__(self, parent, backup={"source": "", "destinations": []}, manager:ThreadManager=None):
         super(QBackupExecution, self).__init__(parent)
 
         logger.info("instantiating new QBackupExecution: " + str(backup))
         self.complete = False
+        self.threadmanager = manager
         self.backupthread = BackupThread(backup)
 
         self._init_layout()
@@ -537,13 +545,14 @@ class QBackupExecution(QWidget):
         self.backupthread.qcom.exec_finished.connect(self._backup_finished)
 
     def startExecution(self):
-        self.backupthread.start()
+        self.threadmanager.addThread(self.backupthread)
 
     def stopExecution(self):
         if self.backupthread.isAlive():
             logger.warning("Aborting backup in progress: " + str(self.backupthread.backup))
         self.backupthread.stop = True
-        self.backupthread.join()
+        #the thread should pass-through its run() method and die, then be picked
+        #up by the thread manager.
 
     @pyqtSlot(ProcessStatus)
     def _update_progress(self, status):
@@ -552,7 +561,6 @@ class QBackupExecution(QWidget):
     
     @pyqtSlot()
     def _backup_finished(self):
-        self.backupthread.join()
         self.complete = True
         self.removeself.emit()
     
