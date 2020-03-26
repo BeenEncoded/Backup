@@ -13,9 +13,7 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import semver
-import os
-import logging
+import semver, os, logging
 
 from data import Configuration, ProgramData
 
@@ -27,7 +25,7 @@ PDATA = ProgramData(_config=CONFIG.config)
 
 #global constants
 VERSION = semver.VersionInfo(1, 3, 0, "beta")
-LOGS_FOLDER = os.path.abspath("./logs")
+LOGS_FOLDER = os.path.join(Configuration.program_home, "logs")
 LOGFILE = (LOGS_FOLDER + os.path.sep + "backup_program.log")
 LOG_LEVEL = {
     "critical": logging.CRITICAL,

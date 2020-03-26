@@ -14,11 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import json
-import os
-import configparser
-import dataclasses
-import logging
+import json, os, configparser, dataclasses, logging
+from pathlib import Path
 
 logger = logging.getLogger("data")
 
@@ -28,26 +25,22 @@ class Configuration:
     This helps to centralize all code relating to saving, storing, getting, and 
     initializing global program configuration.
     '''
+    home_directory: str = str(Path.home())
+    program_home: str = (home_directory + os.sep + ".backup")
+    filename: str = (program_home + os.sep + "backup.conf")
 
     def __init__(self):
         logger.debug("Configuration instantiated.")
-        super(Configuration, self).__init__()
 
         # set up the configuration, initializing it with some sane defaults
         self.config = self._default_config()
 
         # here we make sure that we search for a config file, and
         # if none is loaded we write it.
-        if len(self.config.read(["backup.conf"])) == 0:
+        if len(self.config.read([Configuration.filename])) == 0:
             logger.warning("Configuration file not found, saving to " +
-                           (os.path.abspath(".") + os.path.sep + "backup.conf"))
+                           Configuration.filename)
             self.save()
-
-    def __getitem__(self, key):
-        return self.config[key]
-
-    def __setitem__(self, key, value):
-        self.config[key] = value
 
     # This function returns a default configuration.
     def _default_config(self):
@@ -57,7 +50,7 @@ class Configuration:
         c = configparser.ConfigParser()
 
         c['DEFAULT'] = {
-            "profilepath": os.path.abspath("./backup_profiles.json"),
+            "profilepath": os.path.join(Configuration.program_home, "backup_profiles.json"),
             "loglevel": "warning"
         }
 
@@ -72,9 +65,12 @@ class Configuration:
 
         return c
 
-    def save(self):
+    def save(self) -> None:
         logger.info("Saving configuration")
-        with open("backup.conf", 'w') as config_file:
+        Path(Configuration.program_home).mkdir(parents=True, exist_ok=True)
+        if not os.path.isdir(Configuration.program_home):
+            raise NotADirectoryError(f"\"{Configuration.program_home}\" does not exist!")
+        with open(Configuration.filename, 'w') as config_file:
             self.config.write(config_file)
 
     def __repr__(self):
@@ -83,6 +79,12 @@ class Configuration:
             some_stuff.append(f"SECTION[{key}]")
             some_stuff += [f"{x}: {self.config[key][x]}" for x in self.config[key]]
         return os.linesep.join(some_stuff)
+
+    def __getitem__(self, key):
+        return self.config[key]
+
+    def __setitem__(self, key, value):
+        self.config[key] = value
 
 @dataclasses.dataclass
 class ProgramData:
