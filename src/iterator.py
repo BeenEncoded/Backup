@@ -171,7 +171,12 @@ class recursivecopy:
             for destination in new_dests:
                 if os.path.exists(destination):
                     if os.path.isfile(destination):
-                        os.remove(destination)
+                        try:
+                            os.remove(destination)
+                        except PermissionError as e:
+                            logger.exception("Permission error trying to overwrite the destination.")
+                            operation_results.append(recursivecopy.AccessDeniedError(message="AccessDenied", path=destination, e=e))
+                            continue
                     elif os.path.isdir(destination):
                         if os.listdir(destination) == []:
                             os.rmdir(destination)
@@ -252,6 +257,10 @@ class recursivecopy:
                 results[x][0] = False
                 results[x][1] = recursivecopy.CantOpenFileError("Error on opening destination path.",
                                                                 exception=e, filename=destinations[x])
+            except PermissionError as e:
+                logger.exception("recursivecopy._copy_file")
+                results[x][0] = False
+                results[x][1] = recursivecopy.AccessDeniedError("recursivecopy._copy_file: Failed to open!", e=e, path=destinations[x])
 
         # perform the writing operation.
         haveread = False
@@ -430,6 +439,14 @@ class recursivecopy:
         def __str__(self) -> str:
             return self.message
 
+    class AccessDeniedError(UnexpectedError):
+        def __init__(self, message: str="", e: Exception=None, path: str=""):
+            super(recursivecopy.AccessDeniedError, self).__init__(message, e)
+            self.path = path
+        
+        def __str__(self) -> str:
+            return (f"{self.message}{os.linesep}Permission Denied Exception" + 
+                f" while attempting to overwrite \"{self.path}\": {str(self.exception)}")
 
 class copypredicate:
     @staticmethod
