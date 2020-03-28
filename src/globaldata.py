@@ -24,7 +24,7 @@ CONFIG = Configuration()
 PDATA = ProgramData(_config=CONFIG.config)
 
 #global constants
-VERSION = semver.VersionInfo(1, 3, 0, "beta")
+VERSION = semver.VersionInfo(1, 3, 1, "beta")
 LOGS_FOLDER = os.path.join(Configuration.program_home, "logs")
 LOGFILE = (LOGS_FOLDER + os.path.sep + "backup_program.log")
 LOG_LEVEL = {
