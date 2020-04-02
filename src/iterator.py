@@ -149,7 +149,7 @@ class recursivecopy:
             excluded = [
                 ex for ex in destination_folders if ex not in tempdlist]
             if len(excluded) > 0:
-                logger.info(self._predicate.__qualname__ +
+                logger.debug(self._predicate.__qualname__ +
                             " ruled out operations for source[\"" + source_path + "\"] to " +
                             "destinations " + str(excluded))
 
@@ -181,7 +181,7 @@ class recursivecopy:
                         if os.listdir(destination) == []:
                             os.rmdir(destination)
                         else:
-                            logger.info("not removing [\"" + destination + "\"] because it contains files or folders.")
+                            logger.debug("not removing [\"" + destination + "\"] because it contains files or folders.")
                     else:
                         logger.error(self._copy_fsobject.__qualname__ + ": Could not remove the target destination [\"" +
                                      destination + "\"]")
@@ -264,7 +264,7 @@ class recursivecopy:
 
         # perform the writing operation.
         haveread = False
-        logger.info("Copying [\"" + source + "\"] -> " + str(destinations))
+        logger.debug("Copying [\"" + source + "\"] -> " + str(destinations))
 
         sourcesize = os.stat(source).st_size
         read_blocksize = ((2**20) * 10) # 10 megabytes

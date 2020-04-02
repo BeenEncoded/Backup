@@ -221,6 +221,7 @@ class BackupThread(threading.Thread):
             
             l.status.message = "Copying..."
             l.status.percent = 0.0
+            logger.info(f"Executing copy on \"{l.source}\"")
             iterator = iter(recursivecopy(l.source, l.destinations, predicate=copypredicate.if_source_was_modified_more_recently))
             while not self.stop:
                 try:
@@ -235,11 +236,14 @@ class BackupThread(threading.Thread):
                 l.status.percent = ((l.sources_copied * 100) / l.sources_count)
                 self.updateProgress(l.status)
             
+            logger.info(f"Executing pruneing algorithm.")
             for dest in l.destinations:
                 l.status.message = f"Pruning \"{dest}\""
+                logger.info(f"Pruning \"{dest}\"")
                 self.updateProgress(l.status)
                 self._pruneDestination(l.source, dest)
             
+            logger.info(f"Pruning finished.")
             self.raiseFinished()
         except: # noqa E722
             logger.critical("Uncaught exception in a backup thread!")
@@ -252,6 +256,7 @@ class BackupThread(threading.Thread):
         Returns the number of file objects a delete was executed on successfully.
         Folders count as 1.  rmtree is used on those.
         '''
+        logger.debug(f"{BackupThread._pruneDestination.__qualname__}: called")
         deletecount = 0
         if self.stop:
             return 0
