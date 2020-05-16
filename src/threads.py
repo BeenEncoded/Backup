@@ -81,7 +81,7 @@ class ThreadPool:
 
     def __init__(self, maxcount: int=0):
         self.threadqueue = queue.Queue(0)
-        self.runningthreads = []
+        self.runningthreads = set()
         self.maxcount = maxcount
         self.noadd = False #when true, disabled the addition and starting of more threads.
 
@@ -118,31 +118,20 @@ class ThreadPool:
         Joins all threads that are not alive.
         returns True if any threads were joined.
         '''
-        didjoin = False
-        for x in range(0, len(self.runningthreads)):
-            try:
-                if not self.runningthreads[x].is_alive():
-                    self.runningthreads[x].join()
-                    self.runningthreads.pop(x)
-                    didjoin = True
-            except IndexError:
-                logger.exception("ThreadPool: IndexError")
-                break
-        return didjoin
+        toremove = [t for t in self.runningthreads if not t.is_alive()]
+        self.runningthreads.difference_update(toremove)
+        for t in toremove: t.join()
+        return (len(toremove) > 0)
 
     def terminateAll(self) -> None:
         '''
-        Attempts to join everything.  First joins threads that are alive, then
+        Attempts to join everything.  First joins threads that are not alive, then
         it will blocking join all the rest.
         '''
         self.noadd = True
-        for x in range(0, len(self.runningthreads)):
-            if not self.runningthreads[x].is_alive():
-                self.runningthreads[x].join()
-                self.runningthreads.pop(x)
-        for x in range(0, len(self.runningthreads)):
-            self.runningthreads[x].join()
-            self.runningthreads.pop(x)
+        self.joinAll()
+        for t in self.runningthreads: t.join()
+        self.runningthreads.clear()
 
     def _runthread(self) -> bool:
         '''
@@ -153,7 +142,7 @@ class ThreadPool:
             if not self.noadd:
                 t = self.threadqueue.get(block=True)
                 t.start()
-                self.runningthreads.append(t)
+                self.runningthreads.update([t])
                 return True
         return False
 
@@ -175,7 +164,10 @@ class ThreadManager(Worker):
 
     def doWork(self) -> None:
         while not self.toadd.empty():
-            self.pool.addThread(self.toadd.get(block=True))
+            try:
+                self.pool.addThread(self.toadd.get(block=False, timeout=0.5))
+            except queue.Empty:
+                break
         self.pool.startAll()
         self.pool.joinAll()
 
