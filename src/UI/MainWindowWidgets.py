@@ -44,7 +44,7 @@ def add_to_list(ob, src):
 
 class EditBackupProfileWidget(QWidget):
     '''
-    CentralWidget:
+    EditBackupProfileWidget:
         Edits a backup profile.
     '''
     def __init__(self, par, profile_id):
@@ -82,8 +82,8 @@ class EditBackupProfileWidget(QWidget):
 
         #source and destination editing:
         listeditlayout = QHBoxLayout()
-        listeditlayout.addWidget(EditPathListWidget(self._profile.sources, "Sources", self))
-        listeditlayout.addWidget(EditPathListWidget(self._profile.destinations, "Destinations", self))
+        listeditlayout.addWidget(EditPathListWidget(self._profile.sources, "Source Folders", self))
+        listeditlayout.addWidget(EditPathListWidget(self._profile.destinations, "Destination Folders", self))
         mainlayout.addLayout(listeditlayout)
 
         # Buttons to save, delete, and cancel the backup profile
@@ -159,6 +159,7 @@ class EditBackupProfileWidget(QWidget):
 class EditPathListWidget(QWidget):
     '''
     Sub-widget
+    Allows a user to edit a list of paths.  They can add, delete, and edit with a textbox.
     '''
     def __init__(self, pathlist: list=None, listname: str="Paths", parent=None):
         super(EditPathListWidget, self).__init__(parent)
@@ -172,7 +173,7 @@ class EditPathListWidget(QWidget):
         self.mainlayout = QVBoxLayout()
 
         #a list box labeled with a groupbox for editing the list of destination folders.
-        self.destinations_groupbox = QGroupBox("Destination Folders:")
+        self.destinations_groupbox = QGroupBox(self.listname + ":")
         dests_gbox_layout = QVBoxLayout()
 
         textboxlayout = QHBoxLayout()
@@ -296,6 +297,7 @@ class ManageBackupsWidget(QWidget):
     '''
     CentralWidget:
         Manages backups
+        The first thing the user sees when they start up the program.
     '''
     def __init__(self, parent):
         global PDATA
