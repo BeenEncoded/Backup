@@ -170,10 +170,8 @@ class BackupProfile:
     @staticmethod
     def reassignAllIds(profiles):
         logger.debug("Reassigning all backup profile ids.")
-        for p in profiles:
-            p.ID = -1
-        for p in profiles:
-            p.assignID(profiles)
+        for p in profiles: p.ID = -1
+        for p in profiles: p.assignID(profiles)
 
     @staticmethod
     def writejson(profiles, filename):
