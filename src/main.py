@@ -77,6 +77,9 @@ def setup_argparse() -> argparse.ArgumentParser:
     
     arguments.add_argument("-l", "--list", help="Lists the backup profiles available to use.", 
         action="store_true")
+    
+    arguments.add_argument("--loglevel", help="Set the log level for this run.  Levels are:" + 
+        "\ncritical\nerror\nwarning\ninfo\ndebug")
     return arguments
 
 import atexit

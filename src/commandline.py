@@ -56,6 +56,14 @@ def handle_queries(args) -> None:
 
 def run_commandline(args: argparse.ArgumentParser=None) -> int:
     handle_queries(args)
+    if args.loglevel is not None:
+        if args.loglevel in ["critical", "error", "warning", "info", "debug"]:
+            logging.getLogger().setLevel({
+                "critical": logging.CRITICAL,
+                "error":    logging.ERROR,
+                "warning":  logging.WARNING,
+                "info":     logging.INFO,
+                "debug":    logging.DEBUG}[args.loglevel])
     if args.profile is not None:
         profile = load_named_profile(args.profile)
         if profile is not None:
