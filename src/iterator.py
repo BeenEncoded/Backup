@@ -105,6 +105,9 @@ class recursivecopy:
                 if path == root_path:
                     raise shutil.SameFileError("""recursivecopy: one of the 
                     destinations given is the same as the source.""")
+                if ischild(root_path, path) or ischild(path, root_path):
+                    raise shutil.SameFileError("""recursivecopy: one of the 
+                    destinations given is a path under the source.""")
         self._source = root_path
         self._destinations = [os.path.join(d, os.path.basename(
             self._source)) for d in destination_folders]
@@ -244,7 +247,8 @@ class recursivecopy:
             try:
                 dest_files.append(open(destinations[x], 'wb'))
             except FileNotFoundError as e:
-                logger.exception("recursivecopy._copy_file")
+                if len(destinations[x]) < 256:
+                    logger.exception("recursivecopy._copy_file")
                 results[x][0] = False
                 results[x][1] = recursivecopy.UnexpectedError(
                     "File not found.", e)
@@ -339,6 +343,8 @@ class recursivecopy:
                 if not os.path.exists(destinations[x]):
                     try:
                         os.mkdir(destinations[x])
+                    except FileNotFoundError:
+                        continue
                     except OSError as e:
                         logger.exception("recursivecopy._copy_folder")
                         results[x][0] = False
