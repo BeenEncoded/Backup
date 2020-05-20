@@ -15,9 +15,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from PyQt5.QtCore import pyqtSignal, QObject
-from iterator import recursive, recursivecopy, copypredicate, recursiveprune
+from iterator import recursivecopy
+from algorithms import ProcessStatus, Backup
 
-import dataclasses, threading, logging, queue, time, shutil, os
+import threading, logging, queue, time
 
 logger = logging.getLogger("threads")
 
@@ -175,11 +176,6 @@ class ThreadManager(Worker):
         self.pool.terminateAll()
         super(ThreadManager, self).halt_thread()
 
-@dataclasses.dataclass
-class ProcessStatus:
-    percent: float = 0.0
-    message: str = str()
-
 class BackupThread(threading.Thread):
     class QtComObject(QObject):
         progress_update = pyqtSignal(ProcessStatus)
@@ -189,98 +185,18 @@ class BackupThread(threading.Thread):
     def __init__(self, backup: dict={"source": "", "destinations": []}):
         super(BackupThread, self).__init__()
         self.backup = backup
+        self.algo = Backup(backup, 
+            {"progressupdate": self.updateProgress, 
+            "reporterror": self.showError, 
+            "finished": self.raiseFinished})
         self.qcom = BackupThread.QtComObject()
-        self.stop = False
 
     def run(self):
         logger.debug("BackupThread starting to run.")
-        try:
-            self.stop = False
-            if len(self.backup["destinations"]) == 0:
-                self.raiseFinished()
-                logger.warning("No destination folders, doing nothing.  Backup thread terminating.")
-                return
-            l = threading.local()
-            l.source = self.backup["source"]
-            l.destinations = self.backup["destinations"]
-            l.sources_count = 0
-            l.sources_copied = 0
-            l.status = ProcessStatus(0.0, "Counting stuff...")
-
-            self.updateProgress(l.status)
-            for entry in recursive(l.source):
-                l.sources_count += 1
-            
-            l.status.message = "Copying..."
-            l.status.percent = 0.0
-            logger.info(f"Executing copy on \"{l.source}\"")
-            iterator = iter(recursivecopy(l.source, l.destinations, predicate=copypredicate.if_source_was_modified_more_recently))
-            while not self.stop:
-                try:
-                    errors = next(iterator)
-                except StopIteration:
-                    break
-                if errors is not None:
-                    for error in errors:
-                        self.showError(error)
-                l.sources_copied += 1
-                l.status.message = self._display_string(iterator.current)
-                l.status.percent = ((l.sources_copied * 100) / l.sources_count)
-                self.updateProgress(l.status)
-            
-            logger.info(f"Executing pruneing algorithm.")
-            for dest in l.destinations:
-                l.status.message = f"Pruning \"{dest}\""
-                logger.info(f"Pruning \"{dest}\"")
-                self.updateProgress(l.status)
-                self._pruneDestination(l.source, dest)
-            
-            logger.info(f"Pruning finished.")
-            self.raiseFinished()
-        except: # noqa E722
-            logger.critical("Uncaught exception in a backup thread!")
-            logger.exception("CRITICAL EXCEPTION; " + str(self.backup))
-            self.raiseFinished()
+        self.algo.execute()
     
-    def _pruneDestination(self, source: str="", destination: str="") -> int:
-        '''
-        Prunes the destination.
-        Returns the number of file objects a delete was executed on successfully.
-        Folders count as 1.  rmtree is used on those.
-        '''
-        logger.debug(f"{BackupThread._pruneDestination.__qualname__}: called")
-        deletecount = 0
-        if self.stop:
-            return 0
-        for element in recursiveprune(source, destination):
-            if self.stop:
-                break
-            if not self._deletePath(element):
-                logger.error(f"Prune: could not delete \"{element}\"")
-            else:
-                self.updateProgress(ProcessStatus(percent=100, message=f"Deleted \"{element}\""))
-                logger.warning(f"Deleted while pruning: \"{element}\"")
-                deletecount += 1
-            if self.stop:
-                break
-        return deletecount
-    
-    def _deletePath(self, path: str="") -> bool:
-        if not os.path.exists(path):
-            return True
-        if os.path.islink(path) or os.path.isfile(path):
-            os.remove(path)
-        elif os.path.isdir(path):
-            shutil.rmtree(path, onerror=self.rmtree_onError)
-        return not os.path.exists(path)
-
-    def rmtree_onError(self, function, path, excinfo) -> None:
-        errormessage = ("rmtree: I don't know what heppened... Here's some data:" + os.linesep + 
-            f"function: {str(function)}" + os.linesep + 
-            f"path: \"{path}\"" + os.linesep + 
-            f"excinfo: {str(excinfo)}")
-        self.showError(recursivecopy.UnexpectedError(message=errormessage))
-        logger.error(errormessage)
+    def cancelExec(self) -> None:
+        self.algo.abort = True
 
     def updateProgress(self, status: ProcessStatus):
         '''
@@ -297,8 +213,3 @@ class BackupThread(threading.Thread):
         pyqtSignal: Shows an exception to the user. 
         '''
         self.qcom.show_error.emit(error)
-
-    def _display_string(self, s: str="", length: int=100) -> str:
-        if len(s) > length:
-            s = (s[:int((length / 2) - 3)] + "..." + s[len(s) - int(length / 2 + 1):])
-        return s

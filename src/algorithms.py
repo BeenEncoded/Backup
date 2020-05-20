@@ -1,0 +1,142 @@
+import logging, os, shutil, dataclasses
+
+from iterator import recursivecopy, recursiveprune, recursive, copypredicate
+
+logger = logging.getLogger(__name__)
+
+
+@dataclasses.dataclass
+class ProcessStatus:
+    percent: float = 0.0
+    message: str = str()
+
+class Backup:
+    '''
+    This object encapsulates the backup algorithm in a portable way.  It backs up a single source
+    to any number of destinations.  Using the com argument you can pass callbacks that can
+    update another thread on what is happening or provide progress updates throughout the process.
+    '''
+
+    def __init__(self, 
+        data: dict={"source": "", "destinations": []}, 
+        com: dict={"progressupdate": None, "reporterror": None, "finished": None}):
+        '''
+        Creates a Backup object containing all the information needed to move forward with the backup.
+        data:  a dictionary containing a single source and an array of destinations.
+            source: str()
+            destinations: [str]
+
+        com: callbacks that can be passed in order to recieve updates as the process progresses.
+            progressupdate(ProcessStatus)
+            reporterror(recursivecopy.UnexpectedError)
+            finished()
+        '''
+
+        self.source = data["source"]
+        self.destinations = data["destinations"]
+        self.update_progress = com["progressupdate"]
+        self.report_error = com["reporterror"]
+        self.finishedcallback = com["finished"]
+        self.abort = False
+        self.status = ProcessStatus(0.0, "Nothing is happening yet...")
+    
+    def execute(self):
+        logger.debug("BackupThread starting to run.")
+        try:
+            self.abort = False
+            if len(self.destinations) == 0:
+                self.raiseFinished()
+                logger.warning("No destination folders, doing nothing.  Backup thread terminating.")
+                return
+            sources_count = 0
+            sources_copied = 0
+
+            self.status = ProcessStatus(0.0, "Perparing...")
+            self.updateStatus(self.status)
+            for entry in recursive(self.source): sources_count += 1
+            
+            self.status.message = "Copying..."
+            self.status.percent = 0.0
+            logger.info(f"Executing copy on \"{self.source}\"")
+            iterator = iter(recursivecopy(self.source, self.destinations, predicate=copypredicate.if_source_was_modified_more_recently))
+            while not self.abort:
+                try:
+                    errors = next(iterator)
+                except StopIteration:
+                    break
+                if errors is not None:
+                    for error in errors:
+                        self.reportError(error)
+                sources_copied += 1
+                self.status.message = self._display_string(iterator.current)
+                self.status.percent = ((sources_copied * 100) / sources_count)
+                self.updateStatus(self.status)
+            
+            logger.info(f"Executing pruneing algorithm.")
+            if not self.abort:
+                for dest in self.destinations:
+                    self.status.message = f"Pruning \"{dest}\""
+                    logger.info(f"Pruning \"{dest}\"")
+                    self.updateStatus(self.status)
+                    self._pruneDestination(self.source, dest)
+            
+            logger.info(f"Pruning finished.")
+            self.raiseFinished()
+        except: # noqa E722
+            logger.critical("Uncaught exception in a backup thread!")
+            logger.exception("CRITICAL EXCEPTION; " + str({"source": self.source, "destinations": self.destinations}))
+            self.raiseFinished()
+    
+    def _pruneDestination(self, source: str="", destination: str="") -> int:
+        '''
+        Prunes the destination.
+        Returns the number of file objects a delete was executed on successfully.
+        Folders count as 1.  rmtree is used on those.
+        '''
+        logger.debug(f"{Backup._pruneDestination.__qualname__}: called")
+        deletecount = 0
+        if self.abort:
+            return 0
+        for element in recursiveprune(source, destination):
+            if self.abort: break
+            if not self._deletePath(element):
+                logger.error(f"Prune: could not delete \"{element}\"")
+            else:
+                self.updateStatus(ProcessStatus(percent=100, message=f"Deleted \"{element}\""))
+                logger.warning(f"Deleted while pruning: \"{element}\"")
+                deletecount += 1
+            if self.abort: break
+        return deletecount
+    
+    def _deletePath(self, path: str="") -> bool:
+        if not os.path.exists(path):
+            return True
+        if os.path.islink(path) or os.path.isfile(path):
+            os.remove(path)
+        elif os.path.isdir(path):
+            shutil.rmtree(path, onerror=self.rmtree_onError)
+        return not os.path.exists(path)
+    
+    def rmtree_onError(self, function, path, excinfo) -> None:
+        errormessage = ("rmtree: I don't know what heppened... Here's some data:" + os.linesep + 
+            f"function: {str(function)}" + os.linesep + 
+            f"path: \"{path}\"" + os.linesep + 
+            f"excinfo: {str(excinfo)}")
+        self.reportError(recursivecopy.UnexpectedError(message=errormessage))
+        logger.error(errormessage)
+
+    def raiseFinished(self) -> None:
+        if self.finishedcallback is not None:
+            self.finishedcallback()
+
+    def reportError(self, error: recursivecopy.UnexpectedError = None) -> None:
+        if self.report_error is not None:
+            self.report_error(error)
+    
+    def updateStatus(self, status: ProcessStatus=ProcessStatus(0.0, "DEFAULT STATUS")) -> None:
+        if self.update_progress is not None:
+            self.update_progress(status)
+
+    def _display_string(self, s: str="", length: int=100) -> str:
+        if len(s) > length: s = (s[:int((length / 2) - 3)] + "..." + s[len(s) - int(length / 2 + 1):])
+        return s
