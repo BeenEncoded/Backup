@@ -13,7 +13,10 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import logging, os, sys
+
+
+#First is logging:
+import logging, os, sys, commandline
 from logging.handlers import RotatingFileHandler
 from globaldata import LOGFILE, LOGS_FOLDER, LOG_LEVEL
 
@@ -45,6 +48,37 @@ def setup_logging():
 setup_logging()
 logger = logging.getLogger(__name__)
 
+#now setup the argparse object for commandline options:
+import argparse
+
+def validate_source(d:str="") -> bool:
+    if os.path.isdir(d): return True
+    raise argparse.ArgumentTypeError(r"The source folder is not a directory.  Please pass a path that represents an existing folder.")
+
+def validate_destination(d:str="") -> bool:
+    if os.path.isdir(d): return True
+    raise argparse.ArgumentTypeError(r"The destination folder is not a directory.  Please pass a path that represents an existing folder.")
+
+def setup_argparse() -> argparse.ArgumentParser:
+    helptext = r"""This software backs up a user's computer using backup profiles."""
+
+    arguments = argparse.ArgumentParser(description=helptext)
+
+    arguments.add_argument("--source", "-s", help="Specifies the source" + 
+        " directory to use.  Destination is required if you pass this option.", type=validate_source)
+
+    arguments.add_argument("--destination", "-d", help=r"Specifies a destination directory to back up to.  " + 
+        r"Note that it is recommended to use an external hard disk drive " + 
+        r"for this, and the source option is required with this one.", type=validate_destination)
+    
+    arguments.add_argument("--profile", "-p", help="A backup profile.  This is loaded " + 
+        "from the configuration file.  You will have to create a backup " + 
+        "profile before using this option.  It is recommended you do so through the UI.")
+    
+    arguments.add_argument("-l", "--list", help="Lists the backup profiles available to use.", 
+        action="store_true")
+    return arguments
+
 import atexit
 from UI.MainWindow import display_gui
 from globaldata import PDATA, CONFIG
@@ -57,17 +91,38 @@ def onexit():
     PDATA.save()
     logger.info("[PROGRAM END]")
 
-if __name__ == "__main__":
+def cmd(args: list = []) -> int:
     PDATA.load()
     logger.info("[PROGRAM START]")
     logger.debug("Configuration: " + repr(CONFIG))
     logger.debug("ProgramData: " + str(PDATA))
+    arguments = setup_argparse().parse_args(args)  #for some reason parse args takes it upon itself to terminate the goddamn program...
 
-    atexit.register(onexit)
+    return commandline.run_commandline(arguments)
+
+def gui(args: list=[]) -> int:
+    PDATA.load()
+    logger.info("[PROGRAM START]")
+    logger.debug("Configuration: " + repr(CONFIG))
+    logger.debug("ProgramData: " + str(PDATA))
 
     returnvalue = -1
     try:
         returnvalue = display_gui(sys.argv)
     except:  # noqa E722
         logging.getLogger().exception("CRITICAL EXCEPTION")
-    sys.exit(returnvalue)
+    return returnvalue
+
+def command_cmd(args: argparse.ArgumentParser=None) -> bool:
+    '''
+    Returns true if arguments were passed to the program.  This will
+    mean the user wants a command line!  YAYAYAYAYAYAY
+    '''
+    return len(args) > 1
+
+if __name__ == "__main__":
+    atexit.register(onexit)
+    
+    if command_cmd(sys.argv): sys.exit(cmd(sys.argv[1:]))
+    logger.info("No arguments passed.  Starting graphical user interface.")
+    sys.exit(gui(sys.argv))
