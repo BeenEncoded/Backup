@@ -51,7 +51,7 @@ def handle_queries(args) -> None:
     '''
     if args.list:
         print("Backup Profiles available:")
-        for p in PDATA.profiles: print(p.name)
+        for p in PDATA.profiles: print(f"\t{p.name}")
         sys.exit(0)
 
 def run_commandline(args: argparse.ArgumentParser=None) -> int:
@@ -70,5 +70,5 @@ def run_commandline(args: argparse.ArgumentParser=None) -> int:
             run_backup(profile)
             return 0
     elif (args.source is not None) and (args.destination is not None):
-        logger.error("Source and destination arguments not implimented yet!")
+        print("Source and destination arguments not implimented yet!")
     return 1
