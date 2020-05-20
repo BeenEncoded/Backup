@@ -40,7 +40,7 @@ def setup_logging():
     sh.setFormatter(f)
     fh.setFormatter(f)
 
-    root.addHandler(sh)
+    if len(sys.argv) <= 1: root.addHandler(sh)
     root.addHandler(fh)
     root.setLevel(LOG_LEVEL)
     root.info("log level: " + str(LOG_LEVEL))
