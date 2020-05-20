@@ -139,15 +139,12 @@ class recursivecopy:
         # first if the predicate is set, filter our destinations so that we are only going
         # to copy what we want.
         if self._predicate is not None:
-            tempdlist = []
-            for x in destination_folders:
-                if self._predicate(source_path, os.path.join(x, split_path(self._source, source_path)[1])):
-                    tempdlist.append(x)
+            tempdlist = [x for x in destination_folders if self._predicate(source_path, 
+                os.path.join(x, split_path(self._source, source_path)[1]))]
 
             # purely for logging purposes, we gather information on what paths were removed from the
             # list of destinations and log that.  That's good info... yum yum
-            excluded = [
-                ex for ex in destination_folders if ex not in tempdlist]
+            excluded = [ex for ex in destination_folders if ex not in tempdlist]
             if len(excluded) > 0:
                 logger.debug(self._predicate.__qualname__ +
                             " ruled out operations for source[\"" + source_path + "\"] to " +
@@ -163,8 +160,7 @@ class recursivecopy:
         operation_results = []
 
         if source_path != self._source:
-            new_dests = [os.path.join(d, split_path(self._source, source_path)[
-                                      1]) for d in destination_folders]
+            new_dests = [os.path.join(d, split_path(self._source, source_path)[1]) for d in destination_folders]
         if os.path.isdir(source_path) or os.path.isfile(source_path):
 
             # Removing the destination targets if they exist.
