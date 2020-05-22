@@ -1,41 +1,91 @@
 import argparse, logging, tqdm, sys, math, os
 
 from data import BackupProfile
-from algorithms import Backup, ProcessStatus
+from algorithms import Backup, ProcessStatus, prune_backup
 from globaldata import PDATA
 
 logger = logging.getLogger(__name__)
 
-class BackupState:
+class ProgressState:
     def __init__(self):
         self.prevpercent = 0.0
         self.progressbar = None
+        self.errors = []
     
-    def setDesc(self, d: str="") -> None:
-        if self.progressbar is None: self.progressbar = tqdm.tqdm(total=100)
-        self.progressbar.set_description(d)
+    def __del__(self):
+        if self.progressbar is not None:
+            self.progressbar.close()
+            self.progressbar = None
 
-    def printProgress(self, status: ProcessStatus=ProcessStatus(0.0, "DEFAULT STATUS"))->None:
-        if self.progressbar is None: self.progressbar = tqdm.tqdm(total=100)
-        self.progressbar.update(float(math.floor(status.percent)) - self.prevpercent)
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.deleteProgressbar()
+
+    def deleteProgressbar(self)->None:
+        if self.progressbar is not None:
+            self.progressbar.close()
+            self.progressbar = None
+
+    def printProgress(self, status: ProcessStatus=ProcessStatus(0.0, ""))->None:
+        self.getProgressbar().update(float(math.floor(status.percent)) - self.prevpercent)
         if float(math.floor(status.percent)) != self.prevpercent:
             self.prevpercent = float(math.floor(status.percent))
     
+    def listError(self, error) -> None:
+        self.errors.append(error)
+
     def finishedCallback(self)->None:
         print("BACKUP COMPLETE.")
 
+    def getProgressbar(self) -> tqdm.tqdm:
+        if self.progressbar is None: self.progressbar = tqdm.tqdm(total=100)
+        return self.progressbar
+
+    def setProgressbar(self, newbar: tqdm.tqdm=None)->None:
+        if newbar is not None:
+            if self.progressbar is not None: self.deleteProgressbar()
+            self.progressbar = newbar
+
 def run_backup(backup: BackupProfile=None) -> None:
-    state = BackupState()
-    backups = [Backup({"source": source, "destinations": backup.destinations}, 
-        {"progressupdate": state.printProgress, "reporterror": None, "finished": None})
-        for source in backup.sources]
+    destinations = [d for d in backup.destinations if os.path.isdir(d)]
+    backupexecuted = False
+    with ProgressState() as state:
+        backups = [Backup({"source": source, "destinations": destinations}, 
+            {"progressupdate": state.printProgress, "reporterror": state.listError, "finished": None})
+            for source in backup.sources]
+        
+        for d in destinations: print(f"DESTINATION: {d}")
+        if destinations != backup.destinations:
+            answer = input("Not all destination folders could be found.  Continue anyway? Y/N: ")
+            if "n" in str(answer).lower():
+                print("ABORTED")
+                return
+        
+        #execute all the backups:
+        for b in backups:
+            print()
+            state.getProgressbar().set_description(os.path.basename(b.source))
+            b.execute()
+        
+        #check for errors.  If there were any, then tell the user:
+        if len(state.errors) > 0:
+            print()
+            print(f"There were {len(state.errors)} errors! during the backup.")
+            for error in state.errors: print(str(error))
+            print()
+            answer = input("Would you like to continue with the pruning process?  Y/N: ")
+            if "n" in str(answer).lower():
+                print("ABORTED")
+                return
+
+    #finally prune destinations that the user may have removed from their backup.
+    with ProgressState() as state:
+        state.getProgressbar().set_description("Pruning the backup sources")
+        prune_backup(backup, state.printProgress)
     
-    for d in backup.destinations: print(f"DESTINATION: {d}")
-    for b in backups:
-        print()
-        state.setDesc(os.path.basename(b.source))
-        b.execute()
-    state.progressbar.close()
+    print(f"{backup.name} COMPLETED")
 
 def load_named_profile(name: str="") -> BackupProfile:
     for p in PDATA.profiles:
@@ -69,6 +119,4 @@ def run_commandline(args: argparse.ArgumentParser=None) -> int:
         if profile is not None:
             run_backup(profile)
             return 0
-    elif (args.source is not None) and (args.destination is not None):
-        print("Source and destination arguments not implimented yet!")
     return 1
