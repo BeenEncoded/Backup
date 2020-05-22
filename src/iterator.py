@@ -15,17 +15,39 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import os
-import shutil
-import typing
-import logging
+import os, shutil, typing, logging, enum, re, sys
 
 logger = logging.getLogger("filesystem.iterator")
 
+
+class OsType(enum.IntFlag):
+    '''
+    Operating system support bitmask.
+    '''
+    NO_SUPPORT = 0
+    WINDOWS = enum.auto()
+    LINUX = enum.auto()
+    OSX = enum.auto()
+
+def current_os() -> OsType:
+    '''
+    Returns the OsType corresponding to the platform currently being used.
+    '''
+    systems = { #expressions paired with each platform type
+        r"([Ww][Ii][Nn])": OsType.WINDOWS,
+        r"([Ll]inux)": OsType.LINUX,
+        r"([Dd]arwin)|(osx)|(OSX)": OsType.OSX
+    }
+    plat = sys.platform
+
+    for expression in systems:
+        if re.match(expression, plat):
+            return systems[expression]
+    return OsType.NO_SUPPORT
+
+
 # This is basically just a wrapper class around os.walk, but it actually
 # iterates over everything.
-
-
 class recursive:
     '''
     A recursive directory iterator, the first element of which is the root_path
@@ -247,11 +269,19 @@ class recursivecopy:
             try:
                 dest_files.append(open(destinations[x], 'wb'))
             except FileNotFoundError as e:
-                if len(destinations[x]) < 256:
+                #on windows this exception is thrown when a pathtoolong error
+                #is encountered.  It's generally just a fucking nuisance, but we need to make
+                #sure that we don't cause problems on mac or linux:
+                if current_os() == OsType.WINDOWS:
+                    #on windows, we will ignore this if it's actually a path-too-long
+                    if len(destinations[x]) < 256:
+                        logger.exception("recursivecopy._copy_file")
+                        results[x][0] = False
+                        results[x][1] = recursivecopy.UnexpectedError("File not found.", e)
+                else: #for mac and linux, we simply revert to reporting the error (they don't have path-length limits):
                     logger.exception("recursivecopy._copy_file")
-                results[x][0] = False
-                results[x][1] = recursivecopy.UnexpectedError(
-                    "File not found.", e)
+                    results[x][0] = False
+                    results[x][1] = recursivecopy.UnexpectedError("File not found.", e)
             except OSError as e:
                 logger.exception("recursivecopy._copy_file")
                 results[x][0] = False
