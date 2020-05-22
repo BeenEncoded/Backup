@@ -19,6 +19,8 @@ import os
 import shutil
 from iterator import recursive, recursivecopy, ischild, split_path, copypredicate, recursiveprune
 from tqdm import tqdm
+from algorithms import prune_backup
+import data
 
 
 class IterationTestCase(unittest.TestCase):
@@ -37,11 +39,12 @@ class IterationTestCase(unittest.TestCase):
         for entry in recursive(self.iteration_path):
             self.iteration_path_count += 1
 
+    @unittest.skip("skipping")
     def test_pruneiterator(self):
         for i in recursiveprune(r"D:\beene", r"G:\legion\03152020\d\beene"):
             print(i)
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_recursion(self):
         count = 0
         print("Testing Recursion: ")
@@ -49,7 +52,7 @@ class IterationTestCase(unittest.TestCase):
             count += 1
         self.assertEqual((count > 0), True)
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_split_path(self):
         print("Testing split_path")
         for entry in tqdm(recursive(self.iteration_path), total=self.iteration_path_count):
@@ -57,14 +60,14 @@ class IterationTestCase(unittest.TestCase):
                 self.assertEqual(entry, os.path.join(split_path(self.iteration_path, entry)[
                                  0], split_path(self.iteration_path, entry)[1]))
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_ischild(self):
         print("Testing ischild")
         for entry in tqdm(recursive(self.iteration_path), total=self.iteration_path_count):
             if entry != self.iteration_path:
                 self.assertEqual(ischild(self.iteration_path, entry), True)
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_recursivecopy_initialization(self):
         print("testing recursive copy initialization")
         invalid_destinations = [os.path.abspath("../../../.."),
@@ -164,9 +167,36 @@ class IterationTestCase(unittest.TestCase):
                 for result in results:
                     print("Error: " + str(result))
 
+    def test_backup_prune(self):
+        prune_backup(data._profile_from_dict({
+            "destinations": [
+                "G:/legion/05172020/c",
+                "E:/legiony530/05172020/c"
+                ],
+            "id": 1,
+            "name": "Weekly C Backup",
+            "sources": [
+                "C:/Users/beene/Documents",
+                "C:/Users/beene/.config",
+                "C:/Users/beene/.ssh",
+                "C:/Users/beene/source",
+                "C:/Users/beene/Videos",
+                "C:/Users/beene/.backup",
+                "C:/Users/beene/.omnisharp",
+                "C:/Users/beene/.dotnet",
+                "C:/Users/beene/3D Objects",
+                "C:/Users/beene/bash",
+                "C:/Users/beene/Contacts",
+                "C:/Users/beene/Desktop",
+                "C:/Users/beene/Music",
+                "C:/Users/beene/Pictures"
+                ]
+            }))
+
     # Helper functions:
     def _mkdir(self, dir):
         try:
             os.makedirs(dir)
         except FileExistsError:
             pass
+
