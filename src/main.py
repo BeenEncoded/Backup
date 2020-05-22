@@ -63,13 +63,6 @@ def setup_argparse() -> argparse.ArgumentParser:
     helptext = r"""This software backs up a user's computer using backup profiles."""
 
     arguments = argparse.ArgumentParser(description=helptext)
-
-    arguments.add_argument("--source", "-s", help="Specifies the source" + 
-        " directory to use.  Destination is required if you pass this option.", type=validate_source)
-
-    arguments.add_argument("--destination", "-d", help=r"Specifies a destination directory to back up to.  " + 
-        r"Note that it is recommended to use an external hard disk drive " + 
-        r"for this, and the source option is required with this one.", type=validate_destination)
     
     arguments.add_argument("--profile", "-p", help="A backup profile.  This is loaded " + 
         "from the configuration file.  You will have to create a backup " + 
