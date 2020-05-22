@@ -50,17 +50,34 @@ class ProgressState:
 
 def run_backup(backup: BackupProfile=None) -> None:
     destinations = [d for d in backup.destinations if os.path.isdir(d)]
-    backupexecuted = False
+    sources = [s for s in backup.sources if os.path.isdir(s)]
     with ProgressState() as state:
         backups = [Backup({"source": source, "destinations": destinations}, 
             {"progressupdate": state.printProgress, "reporterror": state.listError, "finished": None})
-            for source in backup.sources]
+            for source in sources]
         
         for d in destinations: print(f"DESTINATION: {d}")
+        if len(destinations) == 0:
+            logger.error("No destinations could be found.  Aborting procedure.")
+            print("No destinations are accessible.  Aborting.")
+            return
         if destinations != backup.destinations:
             answer = input("Not all destination folders could be found.  Continue anyway? Y/N: ")
             if "n" in str(answer).lower():
                 print("ABORTED")
+                return
+        
+        if len(backups) == 0:
+            print("Error: sources don't exist or could not be found.  Aborting procedure.")
+            return
+        
+        if len(backups) != len(backup.sources):
+            logger.error(f"Could not find all the sources.  (found {repr(sources)})  Asking user what to do.")
+            print("Error: could not find all sources, however there were some I could find.")
+            answer = input("Do you want to procede with the ones I found?  Y/N: ")
+            if "n" in str(answer).lower():
+                print("ABORTING")
+                logger.error("User chose to abort.")
                 return
         
         #execute all the backups:
