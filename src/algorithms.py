@@ -1,6 +1,6 @@
 import logging, os, shutil, dataclasses
 
-from iterator import recursivecopy, recursiveprune, recursive, copypredicate, split_path
+from iterator import recursivecopy, recursiveprune, recursive, copypredicate
 from data import BackupProfile
 
 
@@ -85,7 +85,7 @@ class Backup:
             logger.info(f"Pruning finished.")
             self.raiseFinished()
         except: # noqa E722
-            logger.critical("Uncaught exception in a backup thread!")
+            logger.critical("Uncaught exception in a backup algorithm!")
             logger.exception("CRITICAL EXCEPTION; " + str({"source": self.source, "destinations": self.destinations}))
             self.raiseFinished()
     
@@ -143,7 +143,7 @@ class Backup:
         if len(s) > length: s = (s[:int((length / 2) - 3)] + "..." + s[len(s) - int(length / 2 + 1):])
         return s
 
-def prune_backup(backup: BackupProfile=None, updateStatus=None) -> None:
+def prune_backup(backup: BackupProfile=None, updateStatus=None, finished=None) -> None:
     def _tdeletePath(path: str="") -> bool:
         def rmtree_onError(function, path, excinfo) -> None:
             errormessage = ("rmtree: I don't know what heppened... Here's some data:" + os.linesep + 
@@ -160,16 +160,35 @@ def prune_backup(backup: BackupProfile=None, updateStatus=None) -> None:
             shutil.rmtree(path, onerror=rmtree_onError)
         return not os.path.exists(path)
     
+    if len(backup.destinations) == 0:
+        logger.info(f"{prune_backup.__qualname__}: no destinations in the backup.  Returing immediately.")
+        updateStatus(ProcessStatus(100.00, "Didn't find anything"))
+        return
+    
     todel = []
     destinations = None
+    valid_dests = set([d for d in backup.destinations if os.path.isdir(d)])
+    invalid_dests = set(backup.destinations).difference_update(valid_dests)
+
+    if len(valid_dests) == 0:
+        logger.error(f"{prune_backup.__qualname__}:  No viable destinations to prune!  They do not exist.")
+    
+    if len(valid_dests) < len(backup.destinations):
+        logger.warning(f"{prune_backup.__qualname__}: did not find all the destinations.  " + 
+            f"Executing on destinations: {repr(valid_dests)}    Skipping invalids: {repr(invalid_dests)}")
+
     if updateStatus is not None: updateStatus(ProcessStatus(0.0, "Pruning Backup"))
-    for dest in backup.destinations:
+    for dest in valid_dests:
         with os.scandir(dest) as it:
             destinations = [folder.name for folder in it if os.path.isdir(folder.path)]
         sourcenames = [os.path.basename(s) for s in backup.sources]
         for dname in destinations:
             if dname not in sourcenames:
                 todel.append(dest + os.path.sep + dname)
+    
+    if len(todel) == 0:
+        if updateStatus is not None: updateStatus(ProcessStatus(100.00, "Nothing was pruned."))
+    
     x = 0
     for d in todel:
         logger.warning(f"Pruning algorithm deleteing path: \"{d}\"")
