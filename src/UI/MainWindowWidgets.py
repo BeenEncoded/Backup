@@ -304,7 +304,6 @@ class ManageBackupsWidget(QWidget):
 
         super(ManageBackupsWidget, self).__init__(parent)
         self.parent().statusBar().showMessage("Loading Program Data...")
-        PDATA.load()
         self.parent().statusBar().showMessage("Program Data Loaded.", 5000)
         self._profiles = PDATA.profiles
 
