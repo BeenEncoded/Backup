@@ -1,6 +1,8 @@
 import logging, os, shutil, dataclasses
 
-from iterator import recursivecopy, recursiveprune, recursive, copypredicate
+from iterator import recursivecopy, recursiveprune, recursive, copypredicate, split_path
+from data import BackupProfile
+
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +48,7 @@ class Backup:
             self.abort = False
             if len(self.destinations) == 0:
                 self.raiseFinished()
-                logger.warning("No destination folders, doing nothing.  Backup thread terminating.")
+                logger.warning("No destination folders, doing nothing.  Backup aborting.")
                 return
             sources_count = 0
             sources_copied = 0
@@ -140,3 +142,38 @@ class Backup:
     def _display_string(self, s: str="", length: int=100) -> str:
         if len(s) > length: s = (s[:int((length / 2) - 3)] + "..." + s[len(s) - int(length / 2 + 1):])
         return s
+
+def prune_backup(backup: BackupProfile=None, updateStatus=None) -> None:
+    def _tdeletePath(path: str="") -> bool:
+        def rmtree_onError(function, path, excinfo) -> None:
+            errormessage = ("rmtree: I don't know what heppened... Here's some data:" + os.linesep + 
+                f"function: {str(function)}" + os.linesep + 
+                f"path: \"{path}\"" + os.linesep + 
+                f"excinfo: {str(excinfo)}")
+            logger.error(errormessage)
+
+        if not os.path.exists(path):
+            return True
+        if os.path.islink(path) or os.path.isfile(path):
+            os.remove(path)
+        elif os.path.isdir(path):
+            shutil.rmtree(path, onerror=rmtree_onError)
+        return not os.path.exists(path)
+    
+    todel = []
+    destinations = None
+    if updateStatus is not None: updateStatus(ProcessStatus(0.0, "Pruning Backup"))
+    for dest in backup.destinations:
+        with os.scandir(dest) as it:
+            destinations = [folder.name for folder in it if os.path.isdir(folder.path)]
+        sourcenames = [os.path.basename(s) for s in backup.sources]
+        for dname in destinations:
+            if dname not in sourcenames:
+                todel.append(dest + os.path.sep + dname)
+    x = 0
+    for d in todel:
+        logger.warning(f"Pruning algorithm deleteing path: \"{d}\"")
+        _tdeletePath(d)
+        x += 1
+        if updateStatus is not None: updateStatus(ProcessStatus((x / len(todel) * 100), "Pruning Backup"))
+
