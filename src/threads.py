@@ -16,7 +16,8 @@
 
 from PyQt5.QtCore import pyqtSignal, QObject
 from iterator import recursivecopy
-from algorithms import ProcessStatus, Backup
+from algorithms import ProcessStatus, Backup, prune_backup
+from data import BackupProfile
 
 import threading, logging, queue, time
 
@@ -213,3 +214,26 @@ class BackupThread(threading.Thread):
         pyqtSignal: Shows an exception to the user. 
         '''
         self.qcom.show_error.emit(error)
+
+class PruneBackupThread(QObject, threading.Thread):
+    statusUpdated = pyqtSignal(ProcessStatus)
+    finished = pyqtSignal()
+
+    def __init__(self, backup: BackupProfile=None):
+        super(PruneBackupThread, self).__init__()
+        self.backup = backup
+    
+    def run(self)->None:
+        logger.info("prune thread starting")
+        prune_backup(self.backup, self.status)
+        logger.info("pruning algorithm finished")
+        self.rfinished()
+
+    def status(self, ps: ProcessStatus=None)->None:
+        logger.debug(f"{PruneBackupThread.status.__qualname__}: emitting status update")
+        self.statusUpdated.emit(ps)
+
+    def rfinished(self)->None:
+        logger.debug(f"{PruneBackupThread.status.__qualname__}: Backup prune thread emmitting finished ")
+        self.finished.emit()
+
