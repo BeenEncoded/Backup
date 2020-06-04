@@ -105,11 +105,19 @@ class recursivecopy:
         '''
         Initializes the copy iterator.
 
-        Parameters:
-            root_path (string):                 the folder you want to copy.  Also called the "source" folder.
-            destination_folders (list<string>): a list of destination folders (or a string representing the 
+        ### Paraeters
+            :root path (string):                 the folder you want to copy.  Also called the "source" folder.
+            :destination folders (list<string>): a list of destination folders (or a string representing the 
                                                 path to a single destination)
-            predicate:                          A function with the signature <code>predicate(str: source_path, str: source_destination)</code>
+            :predicate:                          A function with the signature
+                predicate(str: sourcePath, str: sourceDestination)
+        
+        ### Exceptions
+            :raises AttributeError:              when an argument passed does not conform to what was expected.
+            :raises NotADirectoryError:          When an argument passed is not a directory.  All arguments are expected to be directories.
+            :raises ValueError:                  When the typing of an argument to this function is not an array of strings or a snigle string.
+            :raises shutil.SameFileError:        When any of the arguments are duplicates.
+
         '''
         if (root_path is None) or (destination_folders is None):
             raise AttributeError("recursivecopy: invalid arguments")
@@ -153,6 +161,10 @@ class recursivecopy:
         return self._copy_fsobject(self.current, self._destinations)
 
     def getCurrentPath(self):
+        '''
+        # getCurrentPath
+            :returns: the current path being iterated over.  Set after a call to __next__
+        '''
         return self.current
 
     # copies a filesystem object
