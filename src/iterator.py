@@ -101,13 +101,15 @@ class recursivecopy:
     Occassionally a path will be skipped.  This can happend when the predicate returns False or
     when no destinations are specified.  In this case the iterator will return None.
     '''
-
     def __init__(self, root_path, destination_folders, predicate=None):
         '''
-        root_path: the folder you want to copy.
+        Initializes the copy iterator.
 
-        destination_folders: a list of folders (or a string representing the 
-        path to a single destination)
+        Parameters:
+            root_path (string):                 the folder you want to copy.  Also called the "source" folder.
+            destination_folders (list<string>): a list of destination folders (or a string representing the 
+                                                path to a single destination)
+            predicate:                          A function with the signature <code>predicate(str: source_path, str: source_destination)</code>
         '''
         if (root_path is None) or (destination_folders is None):
             raise AttributeError("recursivecopy: invalid arguments")
