@@ -226,11 +226,10 @@ class recursivecopy:
             if os.path.isfile(source_path):
                 results = self._copy_file(source_path, new_dests)
                 for r in results:
-                    if not r[0]:
-                        operation_results.append(r[1])
+                    operation_results.append(r)
             if os.path.isdir(source_path):
-                r = self._copy_folder(source_path, new_dests)
-                for result in r:
+                results = self._copy_folder(source_path, new_dests)
+                for result in results:
                     if not result[0]:
                         operation_results.append(result[1])
         else:
@@ -243,140 +242,141 @@ class recursivecopy:
     # Copies a file from source, to destination.
     # If the file exists at the destination it is overwritten.
     #
-    # Returns: an array containing [bool: success, recursivecopy.UnexpectedError: error data] that is the length
-    # of the number of destinations.  Each element represents one of the copy operations
-    # that took place.
+    # Returns: an array containing recursivecopy.UnexpectedErrors that contains
+    # all errors that occured.
     def _copy_file(self, source: str, destinations: list = []):
+        '''
+        ### _copy_file(self, source: str, destinations: list = []) -> [[bool, recursivecopy.UnexpectedError]]
+            :param source: the source path.  A fully qualified path.
+            :param destinations: fully qualified destinations.  (representing the new filenames)
+
+            :returns [recursivecopy.UnexpectedError]: an array of results.
+        '''
+
+        #this is complicated.  Good luck.
+
         if isinstance(destinations, str):
             destinations = [destinations]
         if not os.path.isfile(source):
-            logger.warning(
-                "recursivecopy._copy_file: [\"" + source + "\"] path is not a file.")
-            return [[False, recursivecopy.PathNotWorkingError("The source path argument is not a file!", source)]]
-        for destination in destinations:
-            if os.path.basename(source) != os.path.basename(destination):
-                logger.warning("recursivecopy._copy_file: Arguments invalid: " +
-                               "source: [\"" + source + "\"] destiations: [\"" + destination + "\"]")
-                return [[False, recursivecopy.PathNotWorkingError(("The path arguments don't look right...  Here they are: \n" + source + "\n" + destination), destination)]]
+            logger.error(f"{recursivecopy._copy_file.__qualname__}: [\"{source}\"] path is not a file.")
+            return [recursivecopy.PathNotWorkingError("The source path argument is not a file!", source)]
+        
+        checkresult = self._check_dest_rectified(source, destinations)
+        if len(checkresult) > 0:
+            logger.error(f"{recursivecopy._copy_file.__qualname__}: a check for destination rectification to the new path's destination failed.")
+            return checkresult
 
-        # create results to store the results of the operation and
-        # initialize it to nothing.
-        results = []
-        for x in range(0, len(destinations)):
-            results.append([False, recursivecopy.NothingWasDoneError()])
 
-        # open the source file
-        try:
-            sourcefile = open(source, 'rb')
-        except PermissionError as e:
-            logger.exception("recursivecopy._copy_file")
-            for r in results:
-                r[0] = False
-                r[1] = recursivecopy.CantOpenFileError(
-                    "Source: Permission denied.", exception=e, filename=source)
-            return results
-
+        #----------------------------
         # perform the copy operation.
-        # here we have a list of destination streams:
+        #----------------------------
+        do_continue = False
+        
+        # open the source file
+        ophandle, opsuccess, opresult = self._open_file(source, 'rb')
+        sourcefile = None
+        if not opsuccess: return [opresult]
+        sourcefile = ophandle
+
+        #Open all the destination files.
         dest_files = []
         for x in range(0, len(destinations)):
             try:
-                dest_files.append(open(destinations[x], 'wb'))
-            except FileNotFoundError as e:
-                #on windows this exception is thrown when a pathtoolong error
-                #is encountered.  It's generally just a fucking nuisance, but we need to make
-                #sure that we don't cause problems on mac or linux:
-                if current_os() == OsType.WINDOWS:
-                    #on windows, we will ignore this if it's actually a path-too-long
-                    if len(destinations[x]) < 256:
-                        logger.exception("recursivecopy._copy_file")
-                        results[x][0] = False
-                        results[x][1] = recursivecopy.UnexpectedError("File not found.", e)
-                else: #for mac and linux, we simply revert to reporting the error (they don't have path-length limits):
-                    logger.exception("recursivecopy._copy_file")
-                    results[x][0] = False
-                    results[x][1] = recursivecopy.UnexpectedError("File not found.", e)
-            except OSError as e:
-                logger.exception("recursivecopy._copy_file")
-                results[x][0] = False
-                results[x][1] = recursivecopy.CantOpenFileError("Error on opening destination path.",
-                                                                exception=e, filename=destinations[x])
-            except PermissionError as e:
-                logger.exception("recursivecopy._copy_file")
-                results[x][0] = False
-                results[x][1] = recursivecopy.AccessDeniedError("recursivecopy._copy_file: Failed to open!", e=e, path=destinations[x])
+                dhandle, dsuccess, dresult = self._open_file(destinations[x], 'wb')
+                dest_files.append(tuple(((dhandle if dsuccess else None), (None if dsuccess else dresult), destinations[x])))
+                if dsuccess: do_continue = True #set the write loop to run if we have a handle to write to
+            except: # noqa E722
+                for d,_,_ in dest_files:
+                    if d is not None: d.close()
+                sourcefile.close()
+                raise
+        
+        #dest_files -> [tuple(fileHandle, error, pathstring)]
 
         # perform the writing operation.
         haveread = False
-        logger.debug("Copying [\"" + source + "\"] -> " + str(destinations))
+        logger.debug(f"Copying [\"{source}\"] -> {str(destinations)}")
 
         sourcesize = os.stat(source).st_size
         read_blocksize = ((2**20) * 10) # 10 megabytes
-        if(sourcesize > (2**30)):
+        if(sourcesize > (2**30)): #greater than 1GB
             logger.warning("Largefile, will take some time.")
         
-        while len(dest_files) > 0:
+        while do_continue:
             # read once from the source, and write that data to each destination stream.
-            # this should ease the stress of the operation on the drive.
+            # this should ease the stress of the operation on the source drive.
 
             try:
-                data = sourcefile.read(read_blocksize)
-            except PermissionError as e:
-                logger.exception("PermissionError; source=\"" + source + "\"")
-                for result in results:
-                    result[0] = False
-                    result[1] = recursivecopy.UnexpectedError(("Error reading source: [\"" +
-                                                               source + "\"]"), e)
-                break
-            if len(data) == 0:
-                break  # <-- at EOF
+                rateof, data, rerror = self._read_file(sourcefile, read_blocksize)
+                if rerror is not None:
+                    logger.error("READ ERROR OCCURRED!")
+                    for d,_,_ in dest_files:
+                        if d is not None: d.close() #sourcefile is already closed by _read_file
 
-            if not haveread:
-                haveread = True
+                    #return the error(s).  We can't do anything now.
+                    return ([error for _,error,_ in dest_files if error is not None] + [rerror])
+
+                if rateof: break
+                if not haveread: haveread = True
+            except: # noqa E722
+                #the sourcefile will be closed if an exception is raised from _read_file
+                for d,_,_ in dest_files:
+                    if d is not None: d.close()
+                raise
 
             # Attempt to write the read data to each target destination:
-            for x in range(0, len(dest_files)):
-                if dest_files[x].write(data) == len(data):
-                    results[x][0] = True
-                    results[x][1] = None
-
-                    #if we have a large file, log the progress
-                    if (sourcesize > 2**30) and ((int((sourcefile.tell() / sourcesize) * 100) % 10) == 0):
-                        logger.warning("Largefile copy: %" + str((sourcefile.tell() / sourcesize) * 100))
-                else:
-                    logger.error("Failed to write all the data.  Length of data: " + str(len(data)) + ", " +
-                                 "destination: [\"" + destinations[x] + "\"]  Source: [\"" + source + "\"]")
-                    results[x][0] = False
-                    results[x][1] = recursivecopy.PathOperationFailedError(
-                        "Failed to write all the data to the destination file!", path=destinations[x])
-
-        # here, we address the issue where the length of data read was zero on the first read.
-        # this can mean a couple things, but we add this primarily to address files with nothing
-        # in them.
-        # We assume that in this case if the file being opened was successful, so was the write(s)
-        if not haveread and (len(dest_files) > 0):
-            for r in results:
-                # make sure that the error wasn't overridden by an exception during
-                # opening the destination filehandles
-                if type(r[1]) is recursivecopy.NothingWasDoneError:
-                    r[0] = True
-                    r[1] = None
+            for dest in dest_files:
+                if dest[0] is not None:
+                    try:
+                        werror = self._write_file(dest[0], data)
+                        if werror is not None:
+                            werror.path = dest[2] #set the error's path vairable so we have that information
+                            dest[1] = werror
+                            dest[0].close()
+                    except: # noqa E722
+                        for d,_,_ in dest_files:
+                            if d is not None: d.close()
+                        sourcefile.close()
+                        raise
+            
+            #if we have a large file, log the progress
+            if (sourcesize > 2**30) and ((int((sourcefile.tell() / sourcesize) * 100) % 10) == 0):
+                logger.warning("Largefile copy: %" + str((sourcefile.tell() / sourcesize) * 100))
+            
+            # if for any reason all our destination streams were closed, 
+            # we need to break out of the write operation and halt the process.
+            do_continue = False
+            for handle ,error,_ in dest_files:
+                if error is None and handle is not None:
+                    if not handle.closed: do_continue = True
 
         # the write operations are complete.  Close all the destination
         # streams:
-        for f in dest_files:
-            f.close()
+        for dest in dest_files:
+            if dest[0] is not None: dest[0].close()
+
         sourcefile.close()
 
-        logger.debug(
-            "Copying stat info for source [\"" + source + "\"] to destinations: " + str(destinations))
+        logger.debug(f"Copying stat info for source [\"{source}\"] to destinations: {str(destinations)}")
         # now we need to copy over all the attributes:
         for x in range(0, len(destinations)):
             if os.path.isfile(destinations[x]):
-                shutil.copystat(source, destinations[x])
-        return results
+                try:
+                    shutil.copystat(source, destinations[x], follow_symlinks=False)
+                except: # noqa E722
+                    logger.exception(f"\n\n\n{recursivecopy._copy_file.__qualname__}: UNHANDLED EXCEPTION!\n\n\n")
+                    raise
+        return [error for _,error,_ in dest_files if error is not None]
 
     def _copy_folder(self, source: str, destinations: list = []):
+        '''
+        ### _copy_folder(self, source: str, destinations: list = []): -> [[bool, recursivecopy.UnexpectedError]]
+            :param source: the source path.  A fully qualified path.
+            :param destinations: fully qualified destinations.  (representing the new filenames)
+
+            :returns [[bool, recursivecopy.UnexpectedError]]: an array of results.
+        '''
+
         results = []
         for x in range(0, len(destinations)):
             results.append([False, recursivecopy.NothingWasDoneError()])
@@ -411,6 +411,148 @@ class recursivecopy:
                 results[x] = [False, recursivecopy.WrongArgumentValueError(
                     "Destination is the source!", argvalue=destinations[x], expectedvalue=("Anything but " + source))]
         return results
+
+    def _check_dest_rectified(self, source: str="", dests: list=[]) -> list:
+        '''
+        ### _check_dest_rectified(self, source: str="", dests: list=[]) -> bool
+        performs a check on the source a destinations.  Makes sure that destinations 
+        represents a fully qualified destination path under the destination root.
+
+            :param source: The source path.  Must be a fully qualified path.
+            :param dests:  The destinations.  Must respresent fully qualified destinations.
+        
+            :returns [[bool, resursivecopy.UnexpectedError]]: A list of errors if it did not succeed.
+        '''
+
+        #here we expect the destinations to be rectified.  What this means
+        #is that /a/b/c -> /d yeilds the following destination /d/c which
+        #is a folder or file under the root destination folder (/d, in this case)
+        results = []
+        for destination in dests:
+            if os.path.basename(source) != os.path.basename(destination):
+                logger.warning("recursivecopy._copy_file: Arguments invalid: " +
+                               "source: [\"" + source + "\"] destiations: [\"" + destination + "\"]")
+                results.append(recursivecopy.PathNotWorkingError(("The path arguments don't look right...  Here they are: \n" + source + "\n" + destination), destination))
+        
+        #return the results if there was a problem, otherwise just return None
+        return results
+
+    def _open_file(self, path: str, access: str='wrb') -> tuple:
+        '''
+        ### _open_file(self, path: str, access: str='wrb') -> tuple
+            :param path: a fully qualified path to open.
+            :param access: the type of access.  Same as the read/write string for standard open()
+
+            :returns (handle, bool, recursivecopy.UnexpectedError): whether or not the operation succeeded, and
+                                                            an error if there was one.
+        '''
+        handle = None
+        result = None
+        success = False
+        try:
+            handle = open(path, access)
+            success = True
+        except FileNotFoundError as e:
+            #on windows this exception is thrown when a pathtoolong error
+            #is encountered.  It's generally just a nuisance, but we need to make
+            #sure that we don't cause problems on mac or linux:
+            if current_os() == OsType.WINDOWS:
+                #on windows, we will ignore this if it's actually a path-too-long
+                if len(path) < 256:
+                    logger.exception(f"{recursivecopy._open_file.__qualname__}")
+                    result = recursivecopy.UnexpectedError("File not found.", e)
+                else:
+                    logger.info(f"path too long: \"{path}\"")
+                    result = recursivecopy.PathNotWorkingError("Path too long.  Failed to open.", path)
+            else: #for mac and linux, we simply revert to reporting the error (they don't have path-length limits):
+                logger.exception(f"{recursivecopy._open_file.__qualname__}")
+                result = recursivecopy.UnexpectedError(f"File not found. (\"{path}\")", e)
+        except OSError as e:
+            logger.exception(f"{recursivecopy._open_file.__qualname__}")
+            result = recursivecopy.CantOpenFileError(f"Error on opening \"{path}\".", exception=e, filename=path)
+        except PermissionError as e:
+            logger.exception(f"{recursivecopy._open_file.__qualname__}")
+            result = recursivecopy.AccessDeniedError(f"{recursivecopy._open_file.__qualname__}: Failed to open \"{path}\"!", e=e, path=path)
+        except: # noqa E722
+            #we should have caught everything, but in case we havn't, we 
+            #need to know about it.  Log it and pass the exception on.
+            logger.exception(f"\n\n\nUNHANDLED EXCEPTION: {recursivecopy._open_file.__qualname__}\n\n\n")
+            raise
+        finally:
+            if not success and handle is not None:
+                handle.close()
+                handle = None
+        return handle, success, result
+
+    def _read_file(self, filehandle, blocksize:int = -1):
+        '''
+        ### _read_file(self, filehandle: HANDLE, blocksize: int = -1)
+        Reads a block from the file.  File must have been open with 'rb'.
+
+            :param filehandle: the handle to read
+            :param blocksize:  the number of bytes to read from the file.  if unspecified
+                               reads the entire file.
+            
+            :returns (bool, bytes, error): true if the file is at end.  The bytes read.  An error if there was one, or None.
+        '''
+        success = False
+
+        ateof = False
+        data = b''
+        error = None
+        try:
+            data = filehandle.read(blocksize)
+            success = True
+        except PermissionError as e:
+            logger.exception()
+            error = recursivecopy.AccessDeniedError(f"Permission error encountered while reading from source \"{self.current}\"", e, self.current)
+            return ateof, data, error
+        except: # noqa E722
+            #we should have caught everything, but in case we havn't, we 
+            #need to know about it.  Log it and pass the exception on.
+            logger.exception(f"\n\n\nUNHANDLED EXCEPTION: {recursivecopy._read_file.__qualname__}\n\n\n")
+            raise
+        finally:
+            if not success and filehandle is not None: filehandle.close()
+        
+        ateof = (len(data) == 0)
+        return ateof, data, error
+
+    def _write_file(self, filehandle, data):
+        '''
+        ### _write_file(self, filehandle, blocksize: int = -1):
+        Writes a block to the file.  File must have been open with 'wb'.
+        So far I know of no exceptions that can be raised from this operation, however
+        a log is in place for such an occurance.
+
+            :param filehandle: the handle to write to.
+            :param data:      bytes to write to the file.
+            
+            :returns (bool, recursivecopy.FileWriteFailure): True if the write operation succeeded.
+        '''
+        written = 0
+        success = False
+        try:
+            written = filehandle.write(data)
+            success = True
+        except BlockingIOError:
+            logger.exception(f"\n\n\n{recursivecopy._write_file.__qualname__}: Blocking IO error on write!\n\n\n")
+            raise
+        except: # noqa E722
+            logger.exception(f"\n\n\n{recursivecopy._write_file.__qualname__}:  UNHANDLED EXCEPTION!\n\n\n")
+            raise
+        finally:
+            if not success and filehandle is not None: filehandle.close()
+        
+        #success currently defined as there being no exception thrown, and
+        #all bytes were written.
+        if len(data) == written:
+            return None
+        
+        return recursivecopy.FileWriteFailure(message="Failed to write all the bytes!", e=None)
+
+    def _destination_path(self, source: str="", destinations: list=[]) -> str:
+        pass
 
     class UnexpectedError:
         '''
@@ -493,6 +635,14 @@ class recursivecopy:
         def __str__(self) -> str:
             return (f"{self.message}{os.linesep}Permission Denied Exception" + 
                 f" while attempting to overwrite \"{self.path}\": {str(self.exception)}")
+
+    class FileWriteFailure(UnexpectedError):
+        def __init__(self, message: str="", e: Exception=None, path: str=""):
+            super(recursivecopy.UnexpectedError, self).__init__(message, e)
+            self.path = path
+        
+        def __str__(self) -> str:
+            return f"{self.message}{os.linesep}Failed to write to {self.path}."
 
 class copypredicate:
     @staticmethod
