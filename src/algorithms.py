@@ -54,7 +54,7 @@ class Backup:
 
             self.status = ProcessStatus(0.0, "Perparing...")
             self.updateStatus(self.status)
-            sources_count = sum(len(files) for _, _, files in os.walk(self.source))
+            sources_count = sum((len(files) + len(dirs)) for _, dirs, files in os.walk(self.source))
             
             self.status.message = "Copying..."
             self.status.percent = 0.0
