@@ -1,6 +1,6 @@
 import logging, os, shutil, dataclasses
 
-from iterator import recursivecopy, recursiveprune, recursive, copypredicate
+from iterator import recursivecopy, recursiveprune, copypredicate
 from data import BackupProfile
 
 
