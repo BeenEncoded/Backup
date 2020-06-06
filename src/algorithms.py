@@ -50,12 +50,11 @@ class Backup:
                 self.raiseFinished()
                 logger.warning("No destination folders, doing nothing.  Backup aborting.")
                 return
-            sources_count = 0
             sources_copied = 0
 
             self.status = ProcessStatus(0.0, "Perparing...")
             self.updateStatus(self.status)
-            for entry in recursive(self.source): sources_count += 1
+            sources_count = sum(len(files) for _, _, files in os.walk(self.source))
             
             self.status.message = "Copying..."
             self.status.percent = 0.0
