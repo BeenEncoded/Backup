@@ -51,7 +51,8 @@ class Configuration:
 
         c['DEFAULT'] = {
             "profilepath": os.path.join(Configuration.program_home, "backup_profiles.json"),
-            "loglevel": "warning"
+            "loglevel": "warning",
+            "ignorederrors": "" #a space-separated list of error types.  ex. "PathTooLongError PathNotWorkingError"
         }
 
         c['ui'] = {
