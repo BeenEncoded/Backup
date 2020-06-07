@@ -3,6 +3,7 @@ import argparse, logging, tqdm, sys, math, os
 from data import BackupProfile
 from algorithms import Backup, ProcessStatus, prune_backup
 from globaldata import PDATA
+from iterator import recursivecopy
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +121,10 @@ def handle_queries(args) -> None:
         print("Backup Profiles available:")
         for p in PDATA.profiles: print(f"\t{p.name}")
         sys.exit(0)
+    elif args.listerrortypes:
+        print("Error types:")
+        for name in recursivecopy.ERROR_TYPES.keys(): print(f"\t{name}")
+        sys.exit(0)
 
 def run_commandline(args: argparse.ArgumentParser=None) -> int:
     handle_queries(args)
@@ -131,7 +136,7 @@ def run_commandline(args: argparse.ArgumentParser=None) -> int:
                 "warning":  logging.WARNING,
                 "info":     logging.INFO,
                 "debug":    logging.DEBUG}[args.loglevel])
-    if args.profile is not None:
+    if args.profile:
         profile = load_named_profile(args.profile)
         if profile is not None:
             run_backup(profile)
