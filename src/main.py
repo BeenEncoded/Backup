@@ -63,14 +63,18 @@ def setup_argparse() -> argparse.ArgumentParser:
     helptext = r"""This software backs up a user's computer using backup profiles."""
 
     arguments = argparse.ArgumentParser(description=helptext)
+    mugroup = arguments.add_mutually_exclusive_group()
     
-    arguments.add_argument("--profile", "-p", help="A backup profile.  This is loaded " + 
+    mugroup.add_argument("--profile", "-p", help="A backup profile.  This is loaded " + 
         "from the configuration file.  You will have to create a backup " + 
         "profile before using this option.  It is recommended you do so through the UI.")
     
-    arguments.add_argument("-l", "--list", help="Lists the backup profiles available to use.", 
+    mugroup.add_argument("-l", "--list", help="Lists the backup profiles available to use.", 
         action="store_true")
     
+    mugroup.add_argument("--listerrortypes", "-e", help="List the types of errors that can be reported." + 
+        "  Use this to ignore certain types of errors.", action="store_true")
+
     arguments.add_argument("--loglevel", help="Set the log level for this run.  Levels are:" + 
         "\ncritical\nerror\nwarning\ninfo\ndebug")
     return arguments
