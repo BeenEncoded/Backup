@@ -18,6 +18,7 @@ class Backup:
     to any number of destinations.  Using the com argument you can pass callbacks that can
     update another thread on what is happening or provide progress updates throughout the process.
     '''
+    IGNORED_ERROR_TYPES = [recursivecopy.PathTooLongError]
 
     def __init__(self, 
         data: dict={"source": "", "destinations": []}, 
@@ -67,7 +68,8 @@ class Backup:
                     break
                 if errors is not None:
                     for error in errors:
-                        self.reportError(error)
+                        if type(error) not in Backup.IGNORED_ERROR_TYPES: 
+                            self.reportError(error)
                 sources_copied += 1
                 self.status.message = self._display_string(iterator.current)
                 self.status.percent = ((sources_copied * 100) / sources_count)
