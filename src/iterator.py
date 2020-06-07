@@ -742,13 +742,8 @@ class recursiveprune:
         self.source = source
         self.destination = destination
         self.current = None
-        self.todelete = []
         self.destination = os.path.join(self.destination, os.path.basename(source))
-        for element in recursive(self.destination):
-            if element == self.destination:
-                continue
-            if not self._dest_in_source(element):
-                self.todelete.append(element)
+        self.todelete = set([element for element in recursive(self.destination) if not self._dest_in_source(element)])
         self.iter = iter(self.todelete)
     
     def __iter__(self):
@@ -759,6 +754,7 @@ class recursiveprune:
         return self.current
     
     def _dest_in_source(self, subdir) -> bool:
+        if subdir == self.destination: return True
         newsource = os.path.join(self.source, split_path(self.destination, subdir)[1])
         if os.path.islink(subdir):
             return os.path.islink(newsource)
