@@ -444,8 +444,8 @@ class recursivecopy:
                     logger.exception(f"{recursivecopy._open_file.__qualname__}")
                     result = recursivecopy.UnexpectedError("File not found.", e)
                 else:
-                    logger.info(f"path too long: \"{path}\"")
                     result = recursivecopy.PathTooLongError(e=e, path=path)
+                    logger.info(str(result))
             else: #for mac and linux, we simply revert to reporting the error (they don't have path-length limits):
                 logger.exception(f"{recursivecopy._open_file.__qualname__}")
                 result = recursivecopy.UnexpectedError(f"File not found. (\"{path}\")", e)
@@ -585,7 +585,7 @@ class recursivecopy:
             return self._remove_folder(path)
         except PermissionError as e:
             return recursivecopy.AccessDeniedError(message="Access Denied", e=e, path=path)
-        except:
+        except: # noqa E722
             logger.exception(f"\n\n\n{recursivecopy._remove_file.__qualname__}: UNHANDLED EXCEPTION!\n\n\n")
             raise
         return None
@@ -618,7 +618,7 @@ class recursivecopy:
             self.exception = exception
 
         def __str__(self) -> str:
-            return self.message + os.linesep + str(self.exception)
+            return f"[{recursivecopy.UnexpectedError.__name__}]{self.message}{os.linesep}{str(self.exception)}"
 
     class DirectoryNotEmptyError(UnexpectedError):
         def __init__(self, message: str="", exception: Exception=None, path: str=""):
@@ -626,7 +626,9 @@ class recursivecopy:
             self.path = path
         
         def __str__(self) -> str:
-            return f"Directory is not empty: \"{self.path}\"{os.linesep}{self.message}{os.linesep}{str(self.exception)}"
+            return (f"[{recursivecopy.DirectoryNotEmptyError.__name__}]  " + 
+                f"Directory is not empty: \"{self.path}\"{os.linesep}Message: {self.message}{os.linesep}" + 
+                f"Exception: {str(self.exception)}")
 
     class PathTooLongError(UnexpectedError):
         def __init__(self, message:str="", e:Exception=None, path:str=""):
@@ -634,7 +636,8 @@ class recursivecopy:
             self.path = path
         
         def __str__(self) -> str:
-            return f"Path too long: \"{self.path}\"{os.linesep}{self.message}{os.linesep}{str(self.exception)}"
+            return (f"[{recursivecopy.PathTooLongError.__name__}] Path too long: " + 
+                f"\"{self.path}\"{os.linesep}Message: {self.message}{os.linesep}Exception: {str(self.exception)}")
 
     class PathNotThereError(UnexpectedError):
         def __init__(self, message: str="", exception: Exception = None, path: str=""):
@@ -642,7 +645,7 @@ class recursivecopy:
             self.path = path
         
         def __str__(self) -> str:
-            return f"Path does not exist: \"{self.path}\"{os.linesep}{self.message}{os.linesep}{str(self.exception)}"
+            return f"[{recursivecopy.PathNotThereError.__name__}] Path does not exist: \"{self.path}\"{os.linesep}{self.message}{os.linesep}{str(self.exception)}"
 
     class PathNotWorkingError(UnexpectedError):
         '''
@@ -656,7 +659,7 @@ class recursivecopy:
             self.path = path
 
         def __str__(self) -> str:
-            return self.message + os.linesep + "Path: " + self.path
+            return f"[{recursivecopy.PathNotWorkingError.__name__}]:  {self.message}{os.linesep}Path: {self.path}"
 
     class PathOperationFailedError(UnexpectedError):
         def __init__(self, message: str = "No Message Set", exception: Exception = None, path: str = None):
@@ -664,7 +667,7 @@ class recursivecopy:
             self.path = path
 
         def __str__(self) -> str:
-            return self.message + os.linesep + self.path + os.linesep + str(self.exception)
+            return f"[{recursivecopy.PathOperationFailedError.__name__}]{self.message}{os.linesep}{self.path}{os.linesep}{str(self.exception)}"
 
     class WrongArgumentTypeError(UnexpectedError):
         def __init__(self, message: str = "No message set.", argtype: type = type(None), expectedtype: type = type(None)):
@@ -674,7 +677,7 @@ class recursivecopy:
             self.expected_type = expectedtype
 
         def __str__(self) -> str:
-            return self.message + os.linesep + "Expected type " + str(self.expected_type) + " but instead got " + str(self.argument_type)
+            return f"[{recursivecopy.WrongArgumentTypeError.__name__}]{self.message}{os.linesep}Expected type {str(self.expected_type)} but instead got {str(self.argument_type)}"
 
     class WrongArgumentValueError(UnexpectedError):
         def __init__(self, message: str = None, argvalue=None, expectedvalue=None):
@@ -684,7 +687,8 @@ class recursivecopy:
             self.expected_argument = expectedvalue
 
         def __str__(self) -> str:
-            return self.message + os.linesep + "Expected " + str(self.argument) + " but got " + str(self.expected_argument)
+            return (f"[{recursivecopy.WrongArgumentValueError.__name__}] {self.message}" + 
+                f"{os.linesep}Expected {str(self.argument)} but got {str(self.expected_argument)}")
 
     class CantOpenFileError(UnexpectedError):
         def __init__(self, message: str, exception: Exception = None, filename: str = ""):
@@ -693,7 +697,8 @@ class recursivecopy:
             self.filename = filename
 
         def __str__(self):
-            return "Exception: " + str(self.exception) + os.linesep + "File: " + self.filename
+            return (f"[{recursivecopy.CantOpenFileError.__name__}] Exception: " + 
+                f"{str(self.exception)}{os.linesep}File: {self.filename}")
 
     class NothingWasDoneError(UnexpectedError):
         def __init__(self, message: str = None, exception: Exception = None):
@@ -701,7 +706,7 @@ class recursivecopy:
                 "Nothing was done.", None)
 
         def __str__(self) -> str:
-            return self.message
+            return f"[{recursivecopy.NothingWasDoneError.__name__}] {self.message}"
 
     class AccessDeniedError(UnexpectedError):
         def __init__(self, message: str="", e: Exception=None, path: str=""):
@@ -709,7 +714,7 @@ class recursivecopy:
             self.path = path
         
         def __str__(self) -> str:
-            return (f"{self.message}{os.linesep}Permission Denied Exception" + 
+            return (f"[{recursivecopy.AccessDeniedError.__name__}] {self.message}{os.linesep}Permission Denied Exception" + 
                 f" while attempting to overwrite \"{self.path}\": {str(self.exception)}")
 
     class FileWriteFailure(UnexpectedError):
@@ -718,7 +723,23 @@ class recursivecopy:
             self.path = path
         
         def __str__(self) -> str:
-            return f"{self.message}{os.linesep}Failed to write to {self.path}."
+            return f"[{recursivecopy.FileWriteFailure.__name__}] {self.message}{os.linesep}Failed to write to {self.path}."
+
+    # this map is used to map error names with their types.  This can be used, for example, 
+    # in a configuration file where the user can list types of errors they want or don't want to see.
+    ERROR_TYPES = {
+        DirectoryNotEmptyError.__name__: DirectoryNotEmptyError,
+        PathTooLongError.__name__:PathTooLongError,
+        PathNotThereError.__name__:PathNotThereError,
+        PathNotWorkingError.__name__:PathNotWorkingError,
+        PathOperationFailedError.__name__:PathOperationFailedError,
+        WrongArgumentTypeError.__name__:WrongArgumentTypeError,
+        WrongArgumentValueError.__name__:WrongArgumentValueError,
+        CantOpenFileError.__name__:CantOpenFileError,
+        NothingWasDoneError.__name__:NothingWasDoneError,
+        AccessDeniedError.__name__:AccessDeniedError,
+        FileWriteFailure.__name__:FileWriteFailure
+    }
 
 class copypredicate:
     @staticmethod
