@@ -591,7 +591,7 @@ class recursivecopy:
         return None
 
     def _destination_path(self, source: str="", destinations: list=[]) -> str:
-        pass
+        pass #TODO centralize destination path rectification
 
     # -------------------------------------------------------------------------------------------\
     # Below is a family of errors.  When dealing with system calls (especially                   |
