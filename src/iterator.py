@@ -168,7 +168,7 @@ class recursivecopy:
         return self.current
 
     # copies a filesystem object
-    # errors are returned as an array of exceptions
+    # errors are returned as an array of errors.
     # Returns:
     # [UnexpectedError]
     def _copy_fsobject(self, source_path: str, destination_folders: list):
@@ -200,43 +200,32 @@ class recursivecopy:
 
         if source_path != self._source:
             new_dests = [os.path.join(d, split_path(self._source, source_path)[1]) for d in destination_folders]
-        if os.path.isdir(source_path) or os.path.isfile(source_path):
+        if os.path.isdir(source_path) or os.path.isfile(source_path) or os.path.islink(source_path):
 
             # Removing the destination targets if they exist.
             for destination in new_dests:
                 if os.path.exists(destination):
-                    if os.path.isfile(destination):
-                        try:
-                            os.remove(destination)
-                        except PermissionError as e:
-                            logger.exception("Permission error trying to overwrite the destination.")
-                            operation_results.append(recursivecopy.AccessDeniedError(message="AccessDenied", path=destination, e=e))
-                            continue
-                    elif os.path.isdir(destination):
-                        if os.listdir(destination) == []:
-                            os.rmdir(destination)
+                    result = self._remove(destination)
+                    if result is not None:
+                        if type(result) is recursivecopy.DirectoryNotEmptyError:
+                            #it errored out because the folder contained stuff... it wasn't removed.
+                            logger.debug(f"Not removing [\"{destination}\"] because it contains files or folders.")
                         else:
-                            logger.debug("not removing [\"" + destination + "\"] because it contains files or folders.")
-                    else:
-                        logger.error(self._copy_fsobject.__qualname__ + ": Could not remove the target destination [\"" +
-                                     destination + "\"]")
-                        operation_results.append(recursivecopy.PathNotWorkingError(message=r"""_copy_fsobject: on attempt of removing a destination
-                        target path, I could not determine if it was a folder or a file.""", path=destination))
-                        continue
-            if os.path.isfile(source_path):
+                            operation_results.append(result)
+            
+            if os.path.isfile(source_path) or os.path.islink(source_path):
                 results = self._copy_file(source_path, new_dests)
-                for r in results:
-                    operation_results.append(r)
-            if os.path.isdir(source_path):
+                operation_results.extend(results)
+            elif os.path.isdir(source_path):
                 results = self._copy_folder(source_path, new_dests)
-                for result in results:
-                    if not result[0]:
-                        operation_results.append(result[1])
+                operation_results.extend(results)
         else:
-            logger.error(self._copy_fsobject.__qualname__ + ": Source is neither a file nor a folder.  Source = [\"" +
-                         source_path + "\"]")
+            logger.error(f"{self._copy_fsobject.__qualname__}: Source is neither " + 
+                f"a file nor a folder.  Source = [\"{source_path}\"]")
+            
             operation_results.append(recursivecopy.PathNotWorkingError(
                 "Could not copy path because it was not a file or a folder!",  path=source_path))
+        
         return operation_results
 
     # Copies a file from source, to destination.
@@ -280,10 +269,10 @@ class recursivecopy:
 
         #Open all the destination files.
         dest_files = []
-        for x in range(0, len(destinations)):
+        for dest in destinations:
             try:
-                dhandle, dsuccess, dresult = self._open_file(destinations[x], 'wb')
-                dest_files.append(tuple(((dhandle if dsuccess else None), (None if dsuccess else dresult), destinations[x])))
+                dhandle, dsuccess, dresult = self._open_file(dest, 'wb')
+                dest_files.append(tuple(((dhandle if dsuccess else None), (None if dsuccess else dresult), dest)))
                 if dsuccess: do_continue = True #set the write loop to run if we have a handle to write to
             except: # noqa E722
                 for d,_,_ in dest_files:
@@ -327,17 +316,18 @@ class recursivecopy:
             # Attempt to write the read data to each target destination:
             for dest in dest_files:
                 if dest[0] is not None:
-                    try:
-                        werror = self._write_file(dest[0], data)
-                        if werror is not None:
-                            werror.path = dest[2] #set the error's path vairable so we have that information
-                            dest[1] = werror
-                            dest[0].close()
-                    except: # noqa E722
-                        for d,_,_ in dest_files:
-                            if d is not None: d.close()
-                        sourcefile.close()
-                        raise
+                    if not dest[0].closed:
+                        try:
+                            werror = self._write_file(dest[0], data)
+                            if werror is not None:
+                                werror.path = dest[2] #set the error's path vairable so we have that information
+                                dest[1] = werror
+                                dest[0].close()
+                        except: # noqa E722
+                            for d,_,_ in dest_files:
+                                if d is not None: d.close()
+                            sourcefile.close()
+                            raise
             
             #if we have a large file, log the progress
             if (sourcesize > 2**30) and ((int((sourcefile.tell() / sourcesize) * 100) % 10) == 0):
@@ -378,38 +368,30 @@ class recursivecopy:
         '''
 
         results = []
-        for x in range(0, len(destinations)):
-            results.append([False, recursivecopy.NothingWasDoneError()])
         if isinstance(destinations, str):
             destinations = [destinations]
-        for x in range(0, len(destinations)):
-            if destinations[x] != source:
-                if not os.path.exists(destinations[x]):
+        for dest in destinations:
+            if dest != source:
+                if not os.path.exists(dest):
                     try:
-                        os.mkdir(destinations[x])
+                        os.mkdir(dest)
                     except FileNotFoundError:
                         continue
                     except OSError as e:
                         logger.exception("recursivecopy._copy_folder")
-                        results[x][0] = False
-                        results[x][1] = recursivecopy.UnexpectedError(
-                            "Can't make directory!", exception=e)
+                        results.append(recursivecopy.UnexpectedError("Can't make directory!", exception=e))
                         continue
-                results[x][0] = os.path.exists(destinations[x])
-                if results[x][0]:
-                    shutil.copystat(
-                        source, destinations[x], follow_symlinks=False)
-                    results[x][1] = None
+                if os.path.exists(dest):
+                    shutil.copystat(source, dest, follow_symlinks=False)
                 else:
-                    logger.warning(
-                        "destination [\"" + destinations[x] + "\"] does not exist even after an attempt to create it.")
-                    results[x][1] = recursivecopy.PathOperationFailedError(
-                        message="Could not mkdir!", path=destinations[x])
+                    logger.warning(f"destination [\"{dest}\"] does not exist even after an attempt to create it.")
+                    results.append(recursivecopy.PathOperationFailedError(message="Could not mkdir!", path=dest))
             else:
-                logger.error("recursivecopy._copy_folder: arguments invalid; SOURCE == DESTINATIONS   source: [\"" +
-                             source + "\"]  destinations: " + str(destinations))
-                results[x] = [False, recursivecopy.WrongArgumentValueError(
-                    "Destination is the source!", argvalue=destinations[x], expectedvalue=("Anything but " + source))]
+                logger.error(f"{recursivecopy._copy_folder.__qualname__}: arguments invalid; SOURCE == DESTINATION   " + 
+                    f"source: [\"{source}\"]  destinations: {str(destinations)}")
+                
+                results.append(recursivecopy.WrongArgumentValueError(
+                    "Destination is the source!", argvalue=dest, expectedvalue=("Anything but " + source)))
         return results
 
     def _check_dest_rectified(self, source: str="", dests: list=[]) -> list:
@@ -447,8 +429,8 @@ class recursivecopy:
                                                             an error if there was one.
         '''
         handle = None
-        result = None
         success = False
+        result = None
         try:
             handle = open(path, access)
             success = True
@@ -463,7 +445,7 @@ class recursivecopy:
                     result = recursivecopy.UnexpectedError("File not found.", e)
                 else:
                     logger.info(f"path too long: \"{path}\"")
-                    result = recursivecopy.PathNotWorkingError("Path too long.  Failed to open.", path)
+                    result = recursivecopy.PathTooLongError(e=e, path=path)
             else: #for mac and linux, we simply revert to reporting the error (they don't have path-length limits):
                 logger.exception(f"{recursivecopy._open_file.__qualname__}")
                 result = recursivecopy.UnexpectedError(f"File not found. (\"{path}\")", e)
@@ -551,9 +533,80 @@ class recursivecopy:
         
         return recursivecopy.FileWriteFailure(message="Failed to write all the bytes!", e=None)
 
+    def _remove(self, path: str):
+        '''
+        ### _remove(self, path: str) -> recursivecopy.UnexpectedError
+        Removes a path.  Refer to documentation of _remove_file and _remove_folder.
+
+            :param path: string representing the filesystem object to delete
+
+            :returns recursivecopy.UnexpectedError: An error if an error occured, or None if successful.
+        '''
+        logger.debug(f"Deleting path \"{path}\"")
+        if os.path.islink(path) or os.path.isfile(path):
+            return self._remove_file(path)
+        elif os.path.isdir(path):
+            return self._remove_folder(path)
+        return recursivecopy.PathNotWorkingError(message="Path doesn't register as a symlink, directory, or file!", path=path)
+
+    def _remove_folder(self, path: str):
+        '''
+        ### _remove_folder(self, path: str) -> recursivecopy.UnexpectedError
+        Removes a folder.
+            :param path: string representing the path to the folder to be deleted.
+            :param predicate(str): a callback that returns true on some given 
+                                   condition.  Takes the path parameter as its argument.
+
+            :returns recursivecopy.UnexpectedError: an error if it failed, otherwise None.
+        '''
+        try:
+            os.rmdir(path)
+        except FileNotFoundError as e:
+            return recursivecopy.PathNotThereError(exception=e, path=path)
+        except OSError as e:
+            return recursivecopy.DirectoryNotEmptyError(exception=e, path=path)
+        except: # noqa E722
+            logger.exception(f"\n\n\n{recursivecopy._remove_folder.__qualname__}: UNHANDLED EXCEPTION!\n\n\n")
+            raise
+        return None
+
+    def _remove_file(self, path: str):
+        '''
+        ### _remove_file(self, path: str) -> recursivecopy.UnexpectedError
+        Removes a file.
+            :param path: the path to the file to be removed.
+            
+            :returns UnexpectedError: An error if an error occured, or None if successful.
+        '''
+        try:
+            os.remove(path)
+        except IsADirectoryError:
+            #the path is a folder, not a file:
+            return self._remove_folder(path)
+        except PermissionError as e:
+            return recursivecopy.AccessDeniedError(message="Access Denied", e=e, path=path)
+        except:
+            logger.exception(f"\n\n\n{recursivecopy._remove_file.__qualname__}: UNHANDLED EXCEPTION!\n\n\n")
+            raise
+        return None
+
     def _destination_path(self, source: str="", destinations: list=[]) -> str:
         pass
 
+    # -------------------------------------------------------------------------------------------\
+    # Below is a family of errors.  When dealing with system calls (especially                   |
+    # calls that deal with asynchronous operations that can result in race conditions)           |
+    # a better option to exceptions is returning values and letting the                          |
+    # caller deal with the error instead of throwing an exception and breaking the               |
+    # call stack.  This is generally more complicated but much more robust.                      |
+    #                                                                                            |
+    # Because all errors inherit from UnexpectedError it will be easier to extend its            |
+    # functionality in the future by adding things like error codes and the like if we need to.  |
+    #                                                                                            |
+    # Each error returned by a copy operation inherits from UnexpectedError and implements       |
+    # its __str__ function so the user can simply call str() on each error returned to           |
+    # tell the user about it.                                                                    |
+    # -------------------------------------------------------------------------------------------/
     class UnexpectedError:
         '''
         An unexpected error...  This is not an exception class.  It represents data returned after an operation
@@ -566,6 +619,30 @@ class recursivecopy:
 
         def __str__(self) -> str:
             return self.message + os.linesep + str(self.exception)
+
+    class DirectoryNotEmptyError(UnexpectedError):
+        def __init__(self, message: str="", exception: Exception=None, path: str=""):
+            super(recursivecopy.DirectoryNotEmptyError, self).__init__(message, exception)
+            self.path = path
+        
+        def __str__(self) -> str:
+            return f"Directory is not empty: \"{self.path}\"{os.linesep}{self.message}{os.linesep}{str(self.exception)}"
+
+    class PathTooLongError(UnexpectedError):
+        def __init__(self, message:str="", e:Exception=None, path:str=""):
+            super(recursivecopy.PathTooLongError, self).__init__(message, e)
+            self.path = path
+        
+        def __str__(self) -> str:
+            return f"Path too long: \"{self.path}\"{os.linesep}{self.message}{os.linesep}{str(self.exception)}"
+
+    class PathNotThereError(UnexpectedError):
+        def __init__(self, message: str="", exception: Exception = None, path: str=""):
+            super(recursivecopy.PathNotThereError, self).__init__(message,exception)
+            self.path = path
+        
+        def __str__(self) -> str:
+            return f"Path does not exist: \"{self.path}\"{os.linesep}{self.message}{os.linesep}{str(self.exception)}"
 
     class PathNotWorkingError(UnexpectedError):
         '''
@@ -583,8 +660,7 @@ class recursivecopy:
 
     class PathOperationFailedError(UnexpectedError):
         def __init__(self, message: str = "No Message Set", exception: Exception = None, path: str = None):
-            super(recursivecopy.PathOperationFailedError,
-                  self).__init__(message, exception)
+            super(recursivecopy.PathOperationFailedError, self).__init__(message, exception)
             self.path = path
 
         def __str__(self) -> str:
