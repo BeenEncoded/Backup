@@ -2,6 +2,7 @@ import logging, os, shutil, dataclasses
 
 from iterator import recursivecopy, recursiveprune, copypredicate
 from data import BackupProfile
+from globaldata import CONFIG
 
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,6 @@ class Backup:
     to any number of destinations.  Using the com argument you can pass callbacks that can
     update another thread on what is happening or provide progress updates throughout the process.
     '''
-    IGNORED_ERROR_TYPES = [recursivecopy.PathTooLongError]
 
     def __init__(self, 
         data: dict={"source": "", "destinations": []}, 
@@ -42,6 +42,10 @@ class Backup:
         self.finishedcallback = com["finished"]
         self.abort = False
         self.status = ProcessStatus(0.0, "Nothing is happening yet...")
+        
+        self.ignored_errors = [recursivecopy.ERROR_TYPES[key] for key in recursivecopy.ERROR_TYPES.keys() if key in CONFIG["DEFAULT"]["ignorederrors"]]
+        if len(self.ignored_errors) > 0: logger.info(f"Ignoring error types: {repr(self.ignored_errors)}")
+        else: logger.info("All errors will be shown.")
     
     def execute(self):
         logger.debug("BackupThread starting to run.")
@@ -68,11 +72,11 @@ class Backup:
                     break
                 if errors is not None:
                     for error in errors:
-                        if type(error) not in Backup.IGNORED_ERROR_TYPES: 
+                        if type(error) not in self.ignored_errors: 
                             self.reportError(error)
                 sources_copied += 1
                 self.status.message = self._display_string(iterator.current)
-                self.status.percent = ((sources_copied * 100) / sources_count)
+                if sources_count > 0: self.status.percent = ((sources_copied * 100) / sources_count)
                 self.updateStatus(self.status)
             
             logger.info(f"Executing pruneing algorithm.")
