@@ -141,8 +141,7 @@ class recursivecopy:
                     raise shutil.SameFileError("""recursivecopy: one of the 
                     destinations given is a path under the source.""")
         self._source = root_path
-        self._destinations = [os.path.join(d, os.path.basename(
-            self._source)) for d in destination_folders]
+        self._destinations = [os.path.join(d, os.path.basename(self._source)) for d in destination_folders]
         self.iter = recursive(self._source)
         self._predicate = predicate
 
