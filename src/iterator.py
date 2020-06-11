@@ -101,16 +101,16 @@ class recursivecopy:
     Occassionally a path will be skipped.  This can happend when the predicate returns False or
     when no destinations are specified.  In this case the iterator will return None.
     '''
-    def __init__(self, root_path, destination_folders, predicate=None):
+    def __init__(self, root_path, destination_folders, predicate=None, newdestname: str=None):
         '''
         Initializes the copy iterator.
 
         ### Paraeters
-            :root path (string):                 the folder you want to copy.  Also called the "source" folder.
-            :destination folders (list<string>): a list of destination folders (or a string representing the 
-                                                path to a single destination)
-            :predicate:                          A function with the signature
-                predicate(str: sourcePath, str: sourceDestination)
+            :param root_path (string):                 the folder you want to copy.  Also called the "source" folder.
+            :param destination_folders (list<string>): a list of destination folders (or a string representing the 
+                                                       path to a single destination)
+            :param predicate:                          A function with the signature
+                                                       predicate(str: sourcePath, str: sourceDestination)
         
         ### Exceptions
             :raises AttributeError:              when an argument passed does not conform to what was expected.
@@ -141,14 +141,13 @@ class recursivecopy:
                     raise shutil.SameFileError("""recursivecopy: one of the 
                     destinations given is a path under the source.""")
         self._source = root_path
-        self._destinations = [os.path.join(d, os.path.basename(self._source)) for d in destination_folders]
+        self._destinations = [os.path.join(d, os.path.basename(self._source) if newdestname is None else newdestname) for d in destination_folders]
         self.iter = recursive(self._source)
         self._predicate = predicate
 
         # log the type of predicate used
         if predicate is not None:
-            logger.warning(
-                "conditional predicate passed to recursivecopy: " + self._predicate.__qualname__)
+            logger.warning("conditional predicate passed to recursivecopy: " + self._predicate.__qualname__)
 
     def __iter__(self):
         return self
@@ -171,37 +170,73 @@ class recursivecopy:
     # Returns:
     # [UnexpectedError]
     def _copy_fsobject(self, source_path: str, destination_folders: list):
+        '''
+        ### _copy_fsobject(self, source_path: str, destination_folders: list) -> List[recursivecopy.UnexpectedError]
+            :param source_path: A fully qualified path to the source
+            :param List[destination_folders]: A list of fully qualified paths representing destination directories that the source will be copied into.
+
+            :returns List[recursivecopy.UnexpectedError]: A list of any errors that occured during the operation(s).
+        '''
+        #      Here be dragons:
+        #                                            _   __,----'~~~~~~~~~`-----.__
+        #                                     .  .    `//====-              ____,-'~`
+        #                     -.            \_|// .   /||\\  `~~~~`---.___./
+        #               ______-==.       _-~o  `\/    |||  \\           _,'`
+        #         __,--'   ,=='||\=_    ;_,_,/ _-'|-   |`\   \\        ,'
+        #      _-'      ,='    | \\`.    '',/~7  /-   /  ||   `\.     /
+        #    .'       ,'       |  \\  \_  "  /  /-   /   ||      \   /
+        #   / _____  /         |     \\.`-_/  /|- _/   ,||       \ /
+        #  ,-'     `-|--'~~`--_ \     `==-/  `| \'--===-'       _/`
+        #            '         `-|      /|    )-'\~'      _,--"'
+        #                        '-~^\_/ |    |   `\_   ,^             /\
+        #                             /  \     \__   \/~               `\__
+        #                         _,-' _/'\ ,-'~____-'`-/                 ``===\
+        #                        ((->/'    \|||' `.     `\.  ,                _||
+        #          ./                       \_     `\      `~---|__i__i__\--~'_/
+        #         <_n_                     __-^-_    `)  \-.______________,-~'
+        #          `B'\)                  ///,-'~`__--^-  |-------~~~~^'
+        #          /^>                           ///,--~`-\
+        #         `  `                                       
         if len(destination_folders) == 0:
             return [recursivecopy.NothingWasDoneError("Destination folders had a length of zero.  Returned from \
                 copy immediately.")]
+        
         # first if the predicate is set, filter our destinations so that we are only going
         # to copy what we want.
         if self._predicate is not None:
             tempdlist = [x for x in destination_folders if self._predicate(source_path, 
                 os.path.join(x, split_path(self._source, source_path)[1]))]
+            
+            destination_folders = tempdlist #we'll need this (tempdlist) if we need to log what we are not backup up
 
             # purely for logging purposes, we gather information on what paths were removed from the
             # list of destinations and log that.  That's good info... yum yum
-            excluded = [ex for ex in destination_folders if ex not in tempdlist]
-            if len(excluded) > 0:
-                logger.debug(self._predicate.__qualname__ +
-                            " ruled out operations for source[\"" + source_path + "\"] to " +
-                            "destinations " + str(excluded))
-
-            destination_folders = tempdlist
+            if logging.getLogger().level == logging.DEBUG: # do this only if the log level is debug
+                excluded = [ex for ex in destination_folders if ex not in tempdlist]
+                if len(excluded) > 0:
+                    logger.debug(self._predicate.__qualname__ +
+                                " ruled out operations for source[\"" + source_path + "\"] to " +
+                                "destinations " + str(excluded))
 
         # return if we aren't going to copy anything.
-        if len(destination_folders) == 0:
-            return []
+        if len(destination_folders) == 0: return []
 
         new_dests = destination_folders
         operation_results = []
 
+        # we construct the new destination path if the source currently being iterated over is not the same
+        # as the root source path.
         if source_path != self._source:
             new_dests = [os.path.join(d, split_path(self._source, source_path)[1]) for d in destination_folders]
+        
+        #now we make sure that the source path is somthing we are programmed to copy:
         if os.path.isdir(source_path) or os.path.isfile(source_path) or os.path.islink(source_path):
 
-            # Removing the destination targets if they exist.
+            # Make sure that if the parent directory of our destination doesn't exist, 
+            # that we create it and all intermediate directories.
+            for dest in new_dests: self._make_parent_folders(dest)
+            
+            # Removing the destination targets if they exist. (we will overwrite them)
             for destination in new_dests:
                 if os.path.exists(destination):
                     result = self._remove(destination)
@@ -212,12 +247,11 @@ class recursivecopy:
                         else:
                             operation_results.append(result)
             
+            #next copy them.
             if os.path.isfile(source_path) or os.path.islink(source_path):
-                results = self._copy_file(source_path, new_dests)
-                operation_results.extend(results)
+                operation_results.extend(self._copy_file(source_path, new_dests))
             elif os.path.isdir(source_path):
-                results = self._copy_folder(source_path, new_dests)
-                operation_results.extend(results)
+                operation_results.extend(self._copy_folder(source_path, new_dests))
         else:
             logger.error(f"{self._copy_fsobject.__qualname__}: Source is neither " + 
                 f"a file nor a folder.  Source = [\"{source_path}\"]")
@@ -240,9 +274,6 @@ class recursivecopy:
 
             :returns [recursivecopy.UnexpectedError]: an array of results.
         '''
-
-        #this is complicated.  Good luck.
-
         if isinstance(destinations, str):
             destinations = [destinations]
         if not os.path.isfile(source):
@@ -589,8 +620,19 @@ class recursivecopy:
             raise
         return None
 
-    def _destination_path(self, source: str="", destinations: list=[]) -> str:
-        pass #TODO centralize destination path rectification
+    def _make_parent_folders(self, path: str="") -> bool:
+        if len(path) == 0: return False
+
+        if not os.path.isabs(path): path = os.path.abspath(path)
+        folder = os.path.dirname(path)
+
+        if not os.path.isdir(folder):
+            try:
+                os.makedirs(folder)
+            except FileExistsError:
+                return True
+        
+        return os.path.isdir(folder)
 
     # -------------------------------------------------------------------------------------------\
     # Below is a family of errors.  When dealing with system calls (especially                   |
@@ -790,12 +832,9 @@ class recursiveprune:
 # ['/c/abc', 'abc1/bac3']
 
 def split_path(parent: str, child: str) -> typing.Tuple[str, str]:
-    if not os.path.isabs(parent):
-        parent = os.path.abspath(parent)
-    if not os.path.isabs(child):
-        child = os.path.abspath(child)
-    if ischild(parent, child):
-        return parent, child[(len(parent) + 1):]
+    if not os.path.isabs(parent): parent = os.path.abspath(parent)
+    if not os.path.isabs(child): child = os.path.abspath(child)
+    if ischild(parent, child): return parent, child[(len(parent) + 1):]
     return parent, ""
 
 def ischild(parent: str, child: str) -> bool:
