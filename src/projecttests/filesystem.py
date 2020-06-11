@@ -36,8 +36,7 @@ class IterationTestCase(unittest.TestCase):
         self.backup_source = os.path.abspath("./test/test_source")
         self.backup_dest = os.path.abspath("./test/test_destination")
 
-        for entry in recursive(self.iteration_path):
-            self.iteration_path_count += 1
+        self.iteration_path_count = sum((len(files) + len(dirs)) for _, dirs, files in os.walk(self.iteration_path))
 
     @unittest.skip("skipping")
     def test_pruneiterator(self):
@@ -167,6 +166,7 @@ class IterationTestCase(unittest.TestCase):
                 for result in results:
                     print("Error: " + str(result))
 
+    @unittest.skip("skipping")
     def test_backup_prune(self):
         prune_backup(data._profile_from_dict({
             "destinations": [
