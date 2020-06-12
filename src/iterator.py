@@ -85,7 +85,7 @@ class recursive:
 class recursivecopy:
     '''
     A recursive directory iterator that also copies the elements being iterated.
-    It returns a [[bool: success, any_type: failure_reason]] upon __next__(), which represents
+    It returns a [recursivecopy.UnexpectedError] upon __next__(), which represents
     an array of results.  These results correspond to each copy operation, since
     recursivecopy can also copy to multiple destinations.  When copying to
     multiple destinations recursivecopy only reads the source a single time.
@@ -639,7 +639,8 @@ class recursivecopy:
     # calls that deal with asynchronous operations that can result in race conditions)           |
     # a better option to exceptions is returning values and letting the                          |
     # caller deal with the error instead of throwing an exception and breaking the               |
-    # call stack.  This is generally more complicated but much more robust.                      |
+    # call stack.  This is generally more complicated but much more robust.  All uncaught        |
+    # exceptions should be programming errors or unrecoverable errors.                           |
     #                                                                                            |
     # Because all errors inherit from UnexpectedError it will be easier to extend its            |
     # functionality in the future by adding things like error codes and the like if we need to.  |
