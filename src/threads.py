@@ -17,7 +17,7 @@
 from PyQt5.QtCore import pyqtSignal, QObject
 from iterator import recursivecopy
 from algorithms import ProcessStatus, Backup, prune_backup
-from data import BackupProfile
+from data import BackupProfile, BackupMapping
 
 import threading, logging, queue, time
 
@@ -183,7 +183,7 @@ class BackupThread(threading.Thread):
         show_error = pyqtSignal(recursivecopy.UnexpectedError)
         exec_finished = pyqtSignal()
 
-    def __init__(self, backup: dict={"source": "", "destinations": []}):
+    def __init__(self, backup: dict={"source": "", "destinations": [], "newdest": None}):
         super(BackupThread, self).__init__()
         self.backup = backup
         self.algo = Backup(backup, 
@@ -219,13 +219,14 @@ class PruneBackupThread(QObject, threading.Thread):
     statusUpdated = pyqtSignal(ProcessStatus)
     finished = pyqtSignal()
 
-    def __init__(self, backup: BackupProfile=None):
+    def __init__(self, backup: BackupProfile=None, mapping: BackupMapping=None):
         super(PruneBackupThread, self).__init__()
         self.backup = backup
+        self.mapping = mapping
     
     def run(self)->None:
         logger.info("prune thread starting")
-        prune_backup(self.backup, self.status)
+        prune_backup(self.backup, self.mapping, self.status)
         logger.info("pruning algorithm finished")
         self.rfinished()
 

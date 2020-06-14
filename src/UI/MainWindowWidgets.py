@@ -23,7 +23,7 @@ from PyQt5.QtWidgets import QMessageBox, QScrollArea, QProgressBar
 from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
 from PyQt5.QtGui import QFont
 
-from data import BackupProfile
+from data import BackupProfile, BackupMapping
 from globaldata import PDATA, CONFIG
 from errors import BackupProfileNotFoundError
 from threads import BackupThread, ThreadManager, PruneBackupThread
@@ -370,8 +370,18 @@ class ExecuteBackupWidget(QWidget):
         super(ExecuteBackupWidget, self).__init__(parent)
         self.parent().statusBar().showMessage("Execute: " + backup.name, 3000)
         self.backup = backup
+        self.backupmapping = BackupMapping()
         self.executions = []
 
+        #attempt to load the backup map from one of the destination directories if
+        #they exist (and at least one of them should...)
+        #if none can be loaded a new one is generated.
+        if not self.backupmapping.try_load(self.backup.destinations, CONFIG):
+            self.backupmapping.generate_map(self.backup)
+            self.backupmapping.try_save(self.backup.destinations, CONFIG)
+        
+        self.backupmapping.synchronize_map(self.backup)
+        
         self.threadmanager = ThreadManager(int(CONFIG["BackupBehavior"]["threadcount"]))
         self.threadmanager.throttle = 20
         self.threadmanager.start()
@@ -468,9 +478,12 @@ class ExecuteBackupWidget(QWidget):
         if (len(valid_sources) > 0) and (len(valid_destinations) > 0):
             gblayout.addWidget(self._label_list("Destinations: ", valid_destinations))
             for entry in valid_sources:
-                self.executions.append(QBackupExecution(self, {"source": entry, "destinations": valid_destinations}, self.threadmanager))
+                self.executions.append(QBackupExecution(self, 
+                    {"source": entry, "destinations": valid_destinations, "newdest": self.backupmapping[entry]}, 
+                    self.threadmanager))
+                
                 gblayout.addWidget(self.executions[(len(self.executions) - 1)])
-            self.prunewidget = QPruneBackupExecution(self, self.backup)
+            self.prunewidget = QPruneBackupExecution(self, self.backup, self.backupmapping)
             gblayout.addWidget(self.prunewidget)
             self.prunewidget.hide()
         else:
@@ -525,7 +538,7 @@ class ExecuteBackupWidget(QWidget):
 class QBackupExecution(QWidget):
     removeself = pyqtSignal()
 
-    def __init__(self, parent, backup={"source": "", "destinations": []}, manager:ThreadManager=None):
+    def __init__(self, parent, backup={"source": "", "destinations": [], "newdest": None}, manager:ThreadManager=None):
         super(QBackupExecution, self).__init__(parent)
 
         logger.info("instantiating new QBackupExecution: " + str(backup))
@@ -579,9 +592,9 @@ class QBackupExecution(QWidget):
 class QPruneBackupExecution(QWidget):
     pruneCompleted = pyqtSignal()
 
-    def __init__(self, parent, backup:BackupProfile=None):
+    def __init__(self, parent, backup:BackupProfile=None, mapping: BackupMapping=None):
         super(QPruneBackupExecution, self).__init__(parent)
-        self.prunethread = PruneBackupThread(backup)
+        self.prunethread = PruneBackupThread(backup, mapping)
 
         self._layout()
         self._connectHandlers()

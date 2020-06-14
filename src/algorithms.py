@@ -1,7 +1,7 @@
 import logging, os, shutil, dataclasses
 
 from iterator import recursivecopy, recursiveprune, copypredicate
-from data import BackupProfile
+from data import BackupProfile, BackupMapping
 from globaldata import CONFIG
 
 
@@ -21,13 +21,14 @@ class Backup:
     '''
 
     def __init__(self, 
-        data: dict={"source": "", "destinations": []}, 
+        data: dict={"source": "", "destinations": [], "newdest": None}, 
         com: dict={"progressupdate": None, "reporterror": None, "finished": None}):
         '''
         Creates a Backup object containing all the information needed to move forward with the backup.
         data:  a dictionary containing a single source and an array of destinations.
             source: str()
             destinations: [str]
+            newdestname: str
 
         com: callbacks that can be passed in order to recieve updates as the process progresses.
             progressupdate(ProcessStatus)
@@ -37,6 +38,7 @@ class Backup:
 
         self.source = data["source"]
         self.destinations = data["destinations"]
+        self.newdestname = data["newdest"]
         self.update_progress = com["progressupdate"]
         self.report_error = com["reporterror"]
         self.finishedcallback = com["finished"]
@@ -64,7 +66,16 @@ class Backup:
             self.status.message = "Copying..."
             self.status.percent = 0.0
             logger.info(f"Executing copy on \"{self.source}\"")
-            iterator = iter(recursivecopy(self.source, self.destinations, predicate=copypredicate.if_source_was_modified_more_recently))
+
+            #initialize the iterator.
+            iterator = None
+            if self.newdestname is None:
+                iterator = iter(recursivecopy(self.source, self.destinations, predicate=copypredicate.if_source_was_modified_more_recently))
+            else:
+                iterator = iter(recursivecopy(self.source, self.destinations, 
+                    predicate=copypredicate.if_source_was_modified_more_recently,
+                    newdestname=self.newdestname))
+            
             while not self.abort:
                 try:
                     errors = next(iterator)
@@ -104,7 +115,7 @@ class Backup:
         deletecount = 0
         if self.abort:
             return 0
-        for element in recursiveprune(source, destination):
+        for element in recursiveprune(source, destination, self.newdestname):
             if self.abort: break
             if not self._deletePath(element):
                 logger.error(f"Prune: could not delete \"{element}\"")
@@ -148,7 +159,7 @@ class Backup:
         if len(s) > length: s = (s[:int((length / 2) - 3)] + "..." + s[len(s) - int(length / 2 + 1):])
         return s
 
-def prune_backup(backup: BackupProfile=None, updateStatus=None, finished=None) -> None:
+def prune_backup(backup: BackupProfile=None, mapping: BackupMapping=None, updateStatus=None, finished=None) -> None:
     def _tdeletePath(path: str="") -> bool:
         def rmtree_onError(function, path, excinfo) -> None:
             errormessage = ("rmtree: I don't know what heppened... Here's some data:" + os.linesep + 
@@ -186,7 +197,7 @@ def prune_backup(backup: BackupProfile=None, updateStatus=None, finished=None) -
     for dest in valid_dests:
         with os.scandir(dest) as it:
             destinations = [folder.name for folder in it if os.path.isdir(folder.path)]
-        sourcenames = [os.path.basename(s) for s in backup.sources]
+        sourcenames = [mapping[s] for s in backup.sources]
         for dname in destinations:
             if dname not in sourcenames:
                 todel.append(dest + os.path.sep + dname)

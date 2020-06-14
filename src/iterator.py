@@ -219,7 +219,8 @@ class recursivecopy:
                                 "destinations " + str(excluded))
 
         # return if we aren't going to copy anything.
-        if len(destination_folders) == 0: return []
+        if len(destination_folders) == 0:
+            return []
 
         new_dests = destination_folders
         operation_results = []
@@ -411,11 +412,9 @@ class recursivecopy:
                         logger.exception("recursivecopy._copy_folder")
                         results.append(recursivecopy.UnexpectedError("Can't make directory!", exception=e))
                         continue
-                if os.path.exists(dest):
-                    shutil.copystat(source, dest, follow_symlinks=False)
-                else:
-                    logger.warning(f"destination [\"{dest}\"] does not exist even after an attempt to create it.")
-                    results.append(recursivecopy.PathOperationFailedError(message="Could not mkdir!", path=dest))
+                    if not os.path.exists(dest):
+                        logger.warning(f"destination [\"{dest}\"] does not exist even after an attempt to create it.")
+                        results.append(recursivecopy.PathOperationFailedError(message="Could not mkdir!", path=dest))
             else:
                 logger.error(f"{recursivecopy._copy_folder.__qualname__}: arguments invalid; SOURCE == DESTINATION   " + 
                     f"source: [\"{source}\"]  destinations: {str(destinations)}")
@@ -801,11 +800,11 @@ class recursiveprune:
     when a path is removed.  It gathers all paths to delete on construction,
     so iteration happens without a dependency on filesystem state.
     '''
-    def __init__(self, source, destination):
+    def __init__(self, source, destination, newdestname: str=None):
         self.source = source
         self.destination = destination
         self.current = None
-        self.destination = os.path.join(self.destination, os.path.basename(source))
+        self.destination = os.path.join(self.destination, os.path.basename(source)) if newdestname is None else os.path.join(self.destination, newdestname)
         self.todelete = set([element for element in recursive(self.destination) if not self._dest_in_source(element)])
         self.iter = iter(self.todelete)
     
