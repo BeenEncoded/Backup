@@ -1,15 +1,16 @@
 import argparse, logging, tqdm, sys, math, os
 
-from data import BackupProfile
+from data import BackupProfile, BackupMapping
 from algorithms import Backup, ProcessStatus, prune_backup
-from globaldata import PDATA
+from globaldata import PDATA, CONFIG
 from iterator import recursivecopy
 
 logger = logging.getLogger(__name__)
 
 class ProgressState:
-    def __init__(self):
+    def __init__(self, total=1):
         self.prevpercent = 0.0
+        self.count=total
         self.progressbar = None
         self.errors = []
     
@@ -41,8 +42,11 @@ class ProgressState:
         print("BACKUP COMPLETE.")
 
     def getProgressbar(self) -> tqdm.tqdm:
-        if self.progressbar is None: self.progressbar = tqdm.tqdm(total=100)
+        if self.progressbar is None: self.progressbar = tqdm.tqdm(total=100*self.count)
         return self.progressbar
+
+    def reset(self):
+        self.prevpercent = 0.0
 
     def setProgressbar(self, newbar: tqdm.tqdm=None)->None:
         if newbar is not None:
@@ -51,22 +55,25 @@ class ProgressState:
 
 def run_backup(backup: BackupProfile=None) -> None:
     destinations = [d for d in backup.destinations if os.path.isdir(d)]
-    sources = [s for s in backup.sources if os.path.isdir(s)]
-    with ProgressState() as state:
-        backups = [Backup({"source": source, "destinations": destinations}, 
-            {"progressupdate": state.printProgress, "reporterror": state.listError, "finished": None})
-            for source in sources]
-        
-        for d in destinations: print(f"DESTINATION: {d}")
-        if len(destinations) == 0:
+
+    if len(destinations) == 0:
             logger.error("No destinations could be found.  Aborting procedure.")
             print("No destinations are accessible.  Aborting.")
             return
-        if destinations != backup.destinations:
+    if destinations != backup.destinations:
             answer = input("Not all destination folders could be found.  Continue anyway? Y/N: ")
             if "n" in str(answer).lower():
                 print("ABORTED")
                 return
+
+    sources = [s for s in backup.sources if os.path.isdir(s)]
+    mapping = backup.find_mapping(CONFIG)
+    with ProgressState(total=len(sources)) as state:
+        for d in destinations: print(f"DESTINATION: {d}")
+        
+        backups = [Backup({"source": source, "destinations": destinations, "newdest": mapping[source]}, 
+            {"progressupdate": state.printProgress, "reporterror": state.listError, "finished": None})
+            for source in sources]
         
         if len(backups) == 0:
             print("Error: sources don't exist or could not be found.  Aborting procedure.")
@@ -83,9 +90,10 @@ def run_backup(backup: BackupProfile=None) -> None:
         
         #execute all the backups:
         for b in backups:
-            print()
             state.getProgressbar().set_description(os.path.basename(b.source))
             b.execute()
+            state.reset()
+        sys.stdout.flush()
         
         #check for errors.  If there were any, then tell the user:
         if len(state.errors) > 0:
@@ -101,7 +109,7 @@ def run_backup(backup: BackupProfile=None) -> None:
     #finally prune destinations that the user may have removed from their backup.
     with ProgressState() as state:
         state.getProgressbar().set_description("Pruning the backup sources")
-        prune_backup(backup, state.printProgress)
+        prune_backup(backup, mapping, state.printProgress)
     
     print(f"{backup.name} COMPLETED")
 
