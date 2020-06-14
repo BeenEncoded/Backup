@@ -373,12 +373,17 @@ class ExecuteBackupWidget(QWidget):
         self.backupmapping = BackupMapping()
         self.executions = []
 
-        #attempt to load the backup map from one of the destination directories if
-        #they exist (and at least one of them should...)
-        #if none can be loaded a new one is generated.
+        # attempt to load the backup map from one of the destination directories if
+        # they exist (and at least one of them should...)
+        # if none can be loaded a new one is generated.
         if not self.backupmapping.try_load(self.backup.destinations, CONFIG):
             self.backupmapping.generate_map(self.backup)
-            self.backupmapping.try_save(self.backup.destinations, CONFIG)
+            self.backupmapping.try_save(self.backup.destinations, config=CONFIG)
+        else:
+            # not all destinations are garunteed to have a copy of the file, and 
+            # we want them all to have a copy, so try to save to them after loading
+            # but only if they don't exist already:
+            self.backupmapping.try_save(self.backup.destinations, config=CONFIG, overwrite=False)
         
         self.backupmapping.synchronize_map(self.backup)
         
@@ -517,8 +522,6 @@ class ExecuteBackupWidget(QWidget):
     def _cancel_backups(self):
         if self.cancel_button.text() == "Cancel":
             logger.warning("Cancel button clicked!")
-        for e in self.executions:
-            e.stopExecution()
         self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
 
     @pyqtSlot()
