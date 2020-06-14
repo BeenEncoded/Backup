@@ -1,6 +1,6 @@
 import argparse, logging, tqdm, sys, math, os
 
-from data import BackupProfile, BackupMapping
+from data import BackupProfile
 from algorithms import Backup, ProcessStatus, prune_backup
 from globaldata import PDATA, CONFIG
 from iterator import recursivecopy
