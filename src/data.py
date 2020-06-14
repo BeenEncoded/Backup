@@ -276,7 +276,7 @@ class BackupMapping:
         while format(key, "03X") in used_keys: key += 1
         return format(key, "03X")
 
-    def save(self, filename: typing.AnyStr) -> bool:
+    def save(self, filename: typing.AnyStr, overwrite: bool=True) -> bool:
         '''
         ### save(self, filename: str="") -> bool
         Saves the sourcemapping to the specified file.
@@ -285,9 +285,11 @@ class BackupMapping:
             :returns bool: True if the file was saved successfully.
         '''
         success = False
-        with open(filename, 'wt') as file:
-            json.dump(obj={"backupid": self.backup_id, "mapping": self.sourcemap}, fp=file, indent=4, sort_keys=True)
-            success = True
+        if not os.path.isfile(filename) or overwrite:
+            with open(filename, 'wt') as file:
+                json.dump(obj={"backupid": self.backup_id, "mapping": self.sourcemap}, fp=file, indent=4, sort_keys=True)
+                success = True
+                logger.info(f"Attempted to save mapping to \"{filename}\"  exists = {os.path.exists(filename)}")
         return success
 
     def load(self, filename: typing.AnyStr) -> bool:
@@ -312,7 +314,7 @@ class BackupMapping:
                     return True
         return False
     
-    def try_save(self, folders: list=[], config: Configuration=None) -> bool:
+    def try_save(self, folders: list=[], config: Configuration=None, overwrite: bool=True) -> bool:
         filename = config["BackupBehavior"]["sourcemapname"]
         if len(folders) == 0: return False
         if len(filename) == 0: return False
@@ -321,6 +323,5 @@ class BackupMapping:
         for folder in folders:
             if os.path.isdir(folder) and not os.path.islink(folder):
                 path = (folder + os.path.sep + filename)
-                success |= self.save(path)
-                logger.info(f"Attempted to save mapping to \"{path}\"  exists = {os.path.exists(path)}")
+                success |= self.save(path, overwrite)
         return success
