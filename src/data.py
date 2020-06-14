@@ -155,6 +155,23 @@ class BackupProfile:
             self.ID += 1
         logger.debug("New id for \"" + self.name + "\" is " + str(self.ID))
 
+    def find_mapping(self, config: Configuration=None):
+        # attempt to load the backup map from one of the destination directories if
+        # they exist (and at least one of them should...)
+        # if none can be loaded a new one is generated.
+        backupmapping = BackupMapping()
+        if not backupmapping.try_load(self.destinations, config):
+            backupmapping.generate_map(self)
+            backupmapping.try_save(self.destinations, config=config)
+        else:
+            # not all destinations are garunteed to have a copy of the file, and 
+            # we want them all to have a copy, so try to save to them after loading
+            # but only if they don't exist already:
+            backupmapping.try_save(self.destinations, config=config, overwrite=False)
+        
+        backupmapping.synchronize_map(self)
+        return backupmapping
+
     @staticmethod
     def getById(profiles, id):
         '''
