@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import json, os, configparser, dataclasses, logging
+import json, os, configparser, dataclasses, logging, typing
 from pathlib import Path
 
 logger = logging.getLogger("data")
@@ -61,7 +61,8 @@ class Configuration:
         }
 
         c['BackupBehavior'] = {
-            "threadcount": 3
+            "threadcount": 3,
+            "sourcemapname": "mapfile"
         }
 
         return c
@@ -198,6 +199,128 @@ class BackupProfile:
                 return [_profile_from_dict(entry) for entry in x]
         return []
 
-
 def _profile_from_dict(profile: dict = {"name": "", "sources": [], "destinations": [], "id": 0}) -> BackupProfile:
     return BackupProfile(profile["name"], profile["sources"], profile["destinations"], profile["id"])
+
+@dataclasses.dataclass
+class BackupMapping:
+    '''
+    This data structure represents a mapping between the source and destination directories of 
+    a backup.  It is a good idea to always have one for a backup so that restore functionality can be provided.
+    Basically each path that is backed up from the source has an arbitrary destination.  Moreover, 
+    a source cannot possibly be derived from its destination basename, so we need a way that
+    we can persistently map original source paths to their destinations.
+
+    "But Jonathan, why aren't you just using a dict wherever you need to do this?????"
+    centralized code.  This will be tightly integrated into the backup algorithm and I have
+    no intention of making things dificult if for some reason I need to make a minor change.
+    This will also make it far easier to add other metadata to a backup should that become necessary
+    in the future.
+    '''
+
+    #a map of fully qualified source directory names and the basenames of the destination folders.
+    sourcemap: typing.Dict[str, str]=dataclasses.field(default_factory=dict)
+    backup_id: int = 0
+
+    def generate_map(self, profile: BackupProfile=None) -> None:
+        if profile is None: raise TypeError(f"{BackupMapping.generate_map.__qualname__}: profile argument should not be None type!")
+        self.backup_id = profile.ID
+        for source in profile.sources: self.map_source(source)
+
+    def synchronize_map(self, profile: BackupProfile=None) -> None:
+        '''
+        ### synchronize_map(self, profile: BackupProfile=None) -> None
+        syncs the map to a profile without re-assignment of pre-existing sources.
+            :param profile: the backup profile
+        '''
+        todelete = set(self.sourcemap.keys()).difference(set(profile.sources))
+        toadd = set(profile.sources).difference(set(self.sourcemap.keys()))
+
+        for source in todelete: del self.sourcemap[source]
+        for source in toadd: self.sourcemap[source] = self._new_key()
+
+    def __getitem__(self, key) -> str:
+        '''
+        ### __getitem__(self, key) -> str
+        Gets the destination basename associated with the key.
+
+            :param key: the source path.
+
+            :returns str|None: the new destination basename that has been associated with the source path, or 
+                               None if there is no associated destination path assigned.
+        '''
+        if key not in self.sourcemap.keys(): return None
+        return self.sourcemap[key]
+
+    def map_source(self, sourcepath: str="") -> None:
+        '''
+        ### add_source(sourcepath: str="", destpath: str="") -> None
+        Adds a source mapped to a destination.
+            :param sourcepath: the source
+            :param destpath: the destination
+        '''
+        self.sourcemap[sourcepath] = self._new_key()
+    
+    def remove_source(self, sourcepath: str = "") -> None:
+        '''
+        ### remove_source(self, sourcepath: str = "") -> None
+        Removes a source from the mapping.
+            :param sourcepath: the source
+        '''
+
+        if sourcepath in self.sourcemap.keys(): del self.sourcemap[sourcepath]
+    
+    def _new_key(self) -> str:
+        used_keys = [dest for _,dest in self.sourcemap.items()]
+        key = int("0x01", 16)
+        while format(key, "03X") in used_keys: key += 1
+        return format(key, "03X")
+
+    def save(self, filename: typing.AnyStr) -> bool:
+        '''
+        ### save(self, filename: str="") -> bool
+        Saves the sourcemapping to the specified file.
+            :param filename: the path to the file that this map will be saved to.
+
+            :returns bool: True if the file was saved successfully.
+        '''
+        success = False
+        with open(filename, 'wt') as file:
+            json.dump(obj={"backupid": self.backup_id, "mapping": self.sourcemap}, fp=file, indent=4, sort_keys=True)
+            success = True
+        return success
+
+    def load(self, filename: typing.AnyStr) -> bool:
+        if os.path.isfile(filename) and not os.path.islink(filename):
+            with open(filename, 'rt') as file:
+                data = json.load(file)
+                self.backup_id = int(data["backupid"])
+                self.sourcemap = dict(data["mapping"])
+                return True
+        return False
+
+    def try_load(self, folders: list=[], config: Configuration=None) -> bool:
+        filename = config["BackupBehavior"]["sourcemapname"]
+        if len(folders) == 0: return False
+        if len(filename) == 0: return False
+        path = None
+        for folder in folders:
+            if os.path.isdir(folder) and not os.path.islink(folder):
+                path = (folder + os.path.sep + filename)
+                if self.load(path):
+                    logger.info(f"loaded mapfile: \"{path}\"")
+                    return True
+        return False
+    
+    def try_save(self, folders: list=[], config: Configuration=None) -> bool:
+        filename = config["BackupBehavior"]["sourcemapname"]
+        if len(folders) == 0: return False
+        if len(filename) == 0: return False
+        path = None
+        success = False
+        for folder in folders:
+            if os.path.isdir(folder) and not os.path.islink(folder):
+                path = (folder + os.path.sep + filename)
+                success |= self.save(path)
+                logger.info(f"Attempted to save mapping to \"{path}\"  exists = {os.path.exists(path)}")
+        return success
