@@ -90,6 +90,9 @@ class Backup:
                 if sources_count > 0: self.status.percent = ((sources_copied * 100) / sources_count)
                 self.updateStatus(self.status)
             
+            self.status.percent = 100
+            self.updateStatus(self.status)
+
             logger.info(f"Executing pruneing algorithm.")
             if not self.abort:
                 for dest in self.destinations:
