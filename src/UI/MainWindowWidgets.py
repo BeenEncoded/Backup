@@ -418,7 +418,8 @@ class ExecuteBackupWidget(QWidget):
             e.backupthread.qcom.show_error.connect(self._show_execution_error)
             e.removeself.connect(self._remove_completed)
         self.cancel_button.clicked.connect(self._cancel_backups)
-        self.prunewidget.pruneCompleted.connect(self._onPruneComplete)
+        if hasattr(self, "prunewidget"):
+            self.prunewidget.pruneCompleted.connect(self._onPruneComplete)
     
     def _invalid_paths(self, backup_profile) -> (typing.List[str], typing.List[str]):
         '''
