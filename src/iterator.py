@@ -237,17 +237,6 @@ class recursivecopy:
             # that we create it and all intermediate directories.
             for dest in new_dests: self._make_parent_folders(dest)
             
-            # Removing the destination targets if they exist. (we will overwrite them)
-            for destination in new_dests:
-                if os.path.exists(destination):
-                    result = self._remove(destination)
-                    if result is not None:
-                        if type(result) is recursivecopy.DirectoryNotEmptyError:
-                            #it errored out because the folder contained stuff... it wasn't removed.
-                            logger.debug(f"Not removing [\"{destination}\"] because it contains files or folders.")
-                        else:
-                            operation_results.append(result)
-            
             #next copy them.
             if os.path.isfile(source_path) or os.path.islink(source_path):
                 operation_results.extend(self._copy_file(source_path, new_dests))
