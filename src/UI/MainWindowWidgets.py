@@ -19,7 +19,7 @@ import os, typing, logging
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton
 from PyQt5.QtWidgets import QLineEdit, QGroupBox, QLabel, QFileDialog, QAbstractItemView
 from PyQt5.QtWidgets import QTreeView, QListView, QFileSystemModel, QComboBox, QPlainTextEdit
-from PyQt5.QtWidgets import QMessageBox, QScrollArea, QProgressBar
+from PyQt5.QtWidgets import QMessageBox, QScrollArea, QProgressBar, QFontDialog
 from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
 from PyQt5.QtGui import QFont
 
@@ -156,6 +156,103 @@ class EditBackupProfileWidget(QWidget):
     @pyqtSlot()
     def _set_enabled_buttons(self):
         self.delete_profile_button.setEnabled(BackupProfile.getById(PDATA.profiles, self._profile.ID) is not None)
+
+class EditConfigurationWidget(QWidget):
+    _loglevels = {
+            "critical": logging.CRITICAL,
+            "error":    logging.ERROR,
+            "warning":  logging.WARNING,
+            "info":     logging.INFO,
+            "debug":    logging.DEBUG}
+
+    def __init__(self, parent):
+        super(EditConfigurationWidget, self).__init__(parent)
+        self._layout()
+        self._connectHandlers()
+        self._update_inputs()
+
+        self.newfont = None
+    
+    def __del__(self):
+        pass
+
+    def _layout(self) -> None:
+        mainlayout = QVBoxLayout()
+
+        title = QLabel("Configuration")
+        title.setAlignment(Qt.AlignHCenter)
+        mainlayout.addWidget(title)
+
+        settinggroup = QGroupBox("Settings")
+        gboxlayout = QVBoxLayout()
+        self.loglevelBox = QComboBox()
+        self.loglevelBox.addItems(EditConfigurationWidget._loglevels.keys())
+        gboxlayout.addLayout(self._hlayout(QLabel("Log Level: "), self.loglevelBox))
+
+        self.fonteditbutton = QPushButton("")
+        gboxlayout.addWidget(self.fonteditbutton)
+
+        settinggroup.setLayout(gboxlayout)
+        mainlayout.addWidget(settinggroup)
+        mainlayout.addStretch()
+
+        self.doneButton = QPushButton("Save")
+        self.cancelButton = QPushButton("Cancel")
+        mainlayout.addLayout(self._hlayout(self.doneButton, self.cancelButton))
+
+        self.setLayout(mainlayout)
+
+    def _connectHandlers(self) -> None:
+        self.doneButton.clicked.connect(self.saveAndQuit)
+        self.cancelButton.clicked.connect(self.cancelAndQuit)
+        self.fonteditbutton.clicked.connect(self.setFont)
+
+    @pyqtSlot()
+    def saveAndQuit(self) -> None:
+        logger.info("Saving configuration and quitting the config edit menu.")
+        self._apply_changes()
+        CONFIG.save()
+        self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
+
+    @pyqtSlot()
+    def cancelAndQuit(self) -> None:
+        logger.info("Quitting the configuration menu without saving.")
+        self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
+
+        #when we change the font, it will set the window's current font to
+        # give the user a preview.  Reset this change:
+        self.parent().setFont(QFont(str(CONFIG['ui']['font']), int(CONFIG['ui']['font_size'])))
+
+    @pyqtSlot()
+    def setFont(self) -> None:
+        self.newfont, ok = QFontDialog.getFont(QFont(str(CONFIG['ui']['font']), int(CONFIG['ui']['font_size'])), self)
+        if ok:
+            self.parent().setFont(self.newfont)
+            self.fonteditbutton.setText(f"Font: {self.newfont.family()} {str(self.newfont.pointSize())}")
+        else: self.newfont = None
+
+    def _update_inputs(self) -> None:
+        self.loglevelBox.setCurrentText(CONFIG["DEFAULT"]["loglevel"])
+        self.fonteditbutton.setText(f"Font: {CONFIG['ui']['font']} {CONFIG['ui']['font_size']}")
+
+    def _apply_changes(self) -> None:
+        global CONFIG
+        CONFIG["DEFAULT"]["loglevel"] = self.loglevelBox.currentText()
+        logging.getLogger().setLevel(EditConfigurationWidget._loglevels[CONFIG["DEFAULT"]["loglevel"]])
+        self.parent().setFont(QFont(str(CONFIG['ui']['font']), int(CONFIG['ui']['font_size'])))
+        if self.newfont is not None:
+            CONFIG['ui']['font'] = self.newfont.family()
+            CONFIG['ui']['font_size'] = self.newfont.pointSize()
+
+    def _hlayout(self, *objects) -> QHBoxLayout:
+        layout = QHBoxLayout()
+        for o in objects: layout.addWidget(o)
+        return layout
+    
+    def _vlayout(self, *objects) -> QVBoxLayout:
+        layout = QVBoxLayout()
+        for o in objects: layout.addWidget(o)
+        return layout
 
 class EditPathListWidget(QWidget):
     '''
@@ -330,6 +427,8 @@ class ManageBackupsWidget(QWidget):
         dropdownbox_layout.addWidget(self.backup_combobox)
         dropdownbox_layout.addWidget(self.editbackup_button)
         mainlayout.addLayout(dropdownbox_layout)
+
+        mainlayout.addStretch()
 
         self.executebackup_button = QPushButton("Execute Selected Backup")
         mainlayout.addWidget(self.executebackup_button)

@@ -253,7 +253,7 @@ class recursivecopy:
 
     # Copies a file from source, to destination.
     # If the file exists at the destination it is overwritten.
-    #
+    # 
     # Returns: an array containing recursivecopy.UnexpectedErrors that contains
     # all errors that occured.
     def _copy_file(self, source: str, destinations: list = []):

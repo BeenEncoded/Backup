@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QWidget, QApplication
 from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
 from PyQt5.QtGui import QFont, QKeySequence
 
-from UI.MainWindowWidgets import ManageBackupsWidget
+from UI.MainWindowWidgets import ManageBackupsWidget, EditConfigurationWidget, ExecuteBackupWidget
 from globaldata import CONFIG, VERSION
 import logging
 
@@ -45,7 +45,7 @@ class MainWindow(QMainWindow):
         Applies the program's configuration to the UI.
         '''
         logger.info("Applying configuration to the main window.")
-        uiconfig = CONFIG.config['ui']
+        uiconfig = CONFIG['ui']
 
         self.setFont(QFont(str(uiconfig['font']), int(uiconfig['font_size'])))
 
@@ -61,6 +61,16 @@ class MainWindow(QMainWindow):
 
     def _add_menubar(self):
         self.menuBar().addAction('About', self._show_about)
+        self.menuBar().addAction('Configuration', self._edit_config)
+
+    @pyqtSlot()
+    def _edit_config(self):
+        if type(self.centralWidget()) is not ExecuteBackupWidget:
+            self.setCentralWidget(EditConfigurationWidget(self))
+        else:
+            QMessageBox.warning(self, "Backup Running!", 
+                "You currently have a backup running... Please " + 
+                "cancel it or let it finish before you start fucking around.")
 
     @pyqtSlot()
     def _show_about(self):
