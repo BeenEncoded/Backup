@@ -239,10 +239,10 @@ class EditConfigurationWidget(QWidget):
         global CONFIG
         CONFIG["DEFAULT"]["loglevel"] = self.loglevelBox.currentText()
         logging.getLogger().setLevel(EditConfigurationWidget._loglevels[CONFIG["DEFAULT"]["loglevel"]])
-        self.parent().setFont(QFont(str(CONFIG['ui']['font']), int(CONFIG['ui']['font_size'])))
         if self.newfont is not None:
             CONFIG['ui']['font'] = self.newfont.family()
-            CONFIG['ui']['font_size'] = self.newfont.pointSize()
+            CONFIG['ui']['font_size'] = str(self.newfont.pointSize())
+        self.parent().setFont(QFont(str(CONFIG['ui']['font']), int(CONFIG['ui']['font_size'])))
 
     def _hlayout(self, *objects) -> QHBoxLayout:
         layout = QHBoxLayout()
