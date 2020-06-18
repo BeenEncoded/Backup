@@ -61,7 +61,7 @@ class MainWindow(QMainWindow):
 
     def _add_menubar(self):
         self.menuBar().addAction('About', self._show_about)
-        self.menuBar().addAction('Configuration', self._edit_config)
+        self.configbutton = self.menuBar().addAction('Configuration', self._edit_config)
 
     @pyqtSlot()
     def _edit_config(self):
@@ -85,6 +85,12 @@ class MainWindow(QMainWindow):
         You should have received a copy of the GNU General Public License along with this program.  If not, see <https://www.gnu.org/licenses/>.
         
         Version: """ + str(VERSION))
+
+    def setCentralWidget(self, new_widget: QWidget) -> None:
+        logger.debug("setCentralWidget overrided")
+        self.configbutton.setEnabled(type(new_widget) is ManageBackupsWidget)
+
+        super(MainWindow, self).setCentralWidget(new_widget)
 
 class LogWindow(QWidget):
     '''
