@@ -19,7 +19,7 @@ import os, typing, logging
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton
 from PyQt5.QtWidgets import QLineEdit, QGroupBox, QLabel, QFileDialog, QAbstractItemView
 from PyQt5.QtWidgets import QTreeView, QListView, QFileSystemModel, QComboBox, QPlainTextEdit
-from PyQt5.QtWidgets import QMessageBox, QScrollArea, QProgressBar, QFontDialog
+from PyQt5.QtWidgets import QMessageBox, QScrollArea, QProgressBar, QFontDialog, QSpinBox
 from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
 from PyQt5.QtGui import QFont
 
@@ -187,10 +187,18 @@ class EditConfigurationWidget(QWidget):
         gboxlayout = QVBoxLayout()
         self.loglevelBox = QComboBox()
         self.loglevelBox.addItems(EditConfigurationWidget._loglevels.keys())
+        self.loglevelBox.setToolTip("While debug will show the most information, it " + 
+            "can have a large performance impact.  Warning is the recommended level.")
         gboxlayout.addLayout(self._hlayout(QLabel("Log Level: "), self.loglevelBox))
 
         self.fonteditbutton = QPushButton("")
         gboxlayout.addWidget(self.fonteditbutton)
+
+        self.threadbox = QSpinBox()
+        self.threadbox.setToolTip("This is the max number of threads that will " + 
+            "be used to run your backup.  Note that 1 thread per folder will be used.  If you're running linux " + 
+            "and just back up /home, then this will probably have negligible effect.")
+        gboxlayout.addLayout(self._hlayout(QLabel("Max threads: "), self.threadbox))
 
         settinggroup.setLayout(gboxlayout)
         mainlayout.addWidget(settinggroup)
@@ -234,6 +242,7 @@ class EditConfigurationWidget(QWidget):
     def _update_inputs(self) -> None:
         self.loglevelBox.setCurrentText(CONFIG["DEFAULT"]["loglevel"])
         self.fonteditbutton.setText(f"Font: {CONFIG['ui']['font']} {CONFIG['ui']['font_size']}")
+        self.threadbox.setValue(int(CONFIG['BackupBehavior']['threadcount']))
 
     def _apply_changes(self) -> None:
         global CONFIG
@@ -243,6 +252,7 @@ class EditConfigurationWidget(QWidget):
             CONFIG['ui']['font'] = self.newfont.family()
             CONFIG['ui']['font_size'] = str(self.newfont.pointSize())
         self.parent().setFont(QFont(str(CONFIG['ui']['font']), int(CONFIG['ui']['font_size'])))
+        CONFIG['BackupBehavior']['threadcount'] = str(self.threadbox.value())
 
     def _hlayout(self, *objects) -> QHBoxLayout:
         layout = QHBoxLayout()
