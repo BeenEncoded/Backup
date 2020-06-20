@@ -169,9 +169,9 @@ class EditConfigurationWidget(QWidget):
         super(EditConfigurationWidget, self).__init__(parent)
         self._layout()
         self._connectHandlers()
-        self._update_inputs()
 
         self.newfont = None
+        self._update_inputs()
     
     def __del__(self):
         pass
@@ -233,16 +233,17 @@ class EditConfigurationWidget(QWidget):
 
     @pyqtSlot()
     def setFont(self) -> None:
-        self.newfont, ok = QFontDialog.getFont(QFont(str(CONFIG['ui']['font']), int(CONFIG['ui']['font_size'])), self)
+        self.newfont, ok = QFontDialog.getFont(self.newfont if self.newfont else QFont(str(CONFIG['ui']['font']), int(CONFIG['ui']['font_size'])), self)
         if ok:
             self.parent().setFont(self.newfont)
             self.fonteditbutton.setText(f"Font: {self.newfont.family()} {str(self.newfont.pointSize())}")
-        else: self.newfont = None
 
     def _update_inputs(self) -> None:
         self.loglevelBox.setCurrentText(CONFIG["DEFAULT"]["loglevel"])
         self.fonteditbutton.setText(f"Font: {CONFIG['ui']['font']} {CONFIG['ui']['font_size']}")
         self.threadbox.setValue(int(CONFIG['BackupBehavior']['threadcount']))
+        if self.newfont is not None:
+            self.parent().setFont(self.newfont)
 
     def _apply_changes(self) -> None:
         global CONFIG
@@ -251,7 +252,7 @@ class EditConfigurationWidget(QWidget):
         if self.newfont is not None:
             CONFIG['ui']['font'] = self.newfont.family()
             CONFIG['ui']['font_size'] = str(self.newfont.pointSize())
-        self.parent().setFont(QFont(str(CONFIG['ui']['font']), int(CONFIG['ui']['font_size'])))
+            self.parent().setFont(QFont(str(CONFIG['ui']['font']), int(CONFIG['ui']['font_size'])))
         CONFIG['BackupBehavior']['threadcount'] = str(self.threadbox.value())
 
     def _hlayout(self, *objects) -> QHBoxLayout:
