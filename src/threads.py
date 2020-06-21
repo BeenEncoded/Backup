@@ -238,3 +238,31 @@ class PruneBackupThread(QObject, threading.Thread):
         logger.debug(f"{PruneBackupThread.status.__qualname__}: Backup prune thread emmitting finished ")
         self.finished.emit()
 
+class CoroutineThread(threading.Thread):
+    def __init__(self, function, *args):
+        super(CoroutineThread, self).__init__()
+        self.function = function
+        self.args = args
+        self.value = None
+        self.running = True
+        self.start()
+
+    def run(self)->None:
+        try:
+            self.value = self.function(*(self.args))
+            self.running = False
+        except:
+            logger.exception(f"{CoroutineThread.run.__qualname__}: Exception occurred!")
+            self.running = False
+            raise
+
+    def getReturnValue(self) -> any:
+        while self.running: time.sleep(1 / 30) # wait for execution to end.
+        self.running = True
+        return self.value
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.join()
