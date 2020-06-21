@@ -1,7 +1,7 @@
 '''
 Miscellaneous tests
 '''
-import unittest, time, threading
+import unittest, threading
 from threads import CoroutineThread, Task
 
 barrier = threading.Barrier(3, timeout=5)
