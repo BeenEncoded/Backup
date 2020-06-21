@@ -266,3 +266,17 @@ class CoroutineThread(threading.Thread):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.join()
+
+class Task:
+    def __init__(self, function, *args):
+        print(repr(args))
+        self.crt = CoroutineThread(function, *args)
+    
+    def __del__(self):
+        if self.crt.isAlive(): self.crt.join()
+        self.crt = None
+
+    def wait(self) -> any:
+        if self.crt is not None:
+            x = self.crt.getReturnValue()
+            self.crt.join()

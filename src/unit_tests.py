@@ -14,12 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import unittest
+import unittest, asyncio
 
 #Test Cases:
-from projecttests.filesystem import IterationTestCase # noqa: F401
+#from projecttests.filesystem import IterationTestCase # noqa: F401
 #from projecttests.data import DataTestCase # noqa: F401
-#from projecttests.misc import MiscTestCase # noqa: F401
+from projecttests.misc import MiscTestCase # noqa: F401
 
 if __name__ == "__main__":
     unittest.main()
