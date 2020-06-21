@@ -14,9 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import unittest
-import os
-import shutil
+import unittest, os, shutil
 from iterator import recursive, recursivecopy, ischild, split_path, copypredicate, recursiveprune
 from tqdm import tqdm
 from algorithms import prune_backup
@@ -29,14 +27,14 @@ class IterationTestCase(unittest.TestCase):
     '''
 
     @classmethod
-    def setUpClass(self):
-        self.iteration_path = os.path.abspath("../../..")
-        self.iteration_path_count = 0
+    def setUpClass(cls):
+        cls.iteration_path = os.path.abspath("../../..")
+        cls.iteration_path_count = 0
 
-        self.backup_source = os.path.abspath("./test/test_source")
-        self.backup_dest = os.path.abspath("./test/test_destination")
+        cls.backup_source = os.path.abspath("./test/test_source")
+        cls.backup_dest = os.path.abspath("./test/test_destination")
 
-        self.iteration_path_count = sum((len(files) + len(dirs)) for _, dirs, files in os.walk(self.iteration_path))
+        cls.iteration_path_count = sum((len(files) + len(dirs)) for _, dirs, files in os.walk(cls.iteration_path))
 
     @unittest.skip("skipping")
     def test_pruneiterator(self):
