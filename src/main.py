@@ -21,6 +21,7 @@ import os
 import sys
 import atexit
 import argparse
+from typing import List
 from logging.handlers import RotatingFileHandler
 from UI.MainWindow import display_gui
 
@@ -55,12 +56,10 @@ def setup_logging():
 setup_logging()
 logger = logging.getLogger(__name__)
 
-# now setup the argparse object for commandline options:
-
-
 
 def validate_source(d: str = "") -> bool:
-    if os.path.isdir(d): return True
+    if os.path.isdir(d):
+        return True
     raise argparse.ArgumentTypeError(
         r"The source folder is not a directory.  Please pass a path that represents an existing folder.")
 
@@ -92,13 +91,14 @@ def setup_argparse() -> argparse.ArgumentParser:
                                               "\ncritical\nerror\nwarning\ninfo\ndebug")
     return arguments
 
+
 def onexit():
     CONFIG.save()
     PDATA.save()
     logger.info("[PROGRAM END]")
 
 
-def cmd(args: list = []) -> int:
+def cmd(args: List[str] = []) -> int:
     PDATA.load()
     logger.info("[PROGRAM START]")
     logger.debug("Configuration: " + repr(CONFIG))
@@ -109,7 +109,7 @@ def cmd(args: list = []) -> int:
     return commandline.run_commandline(arguments)
 
 
-def gui(args: list = []) -> int:
+def gui(args: List[str] = []) -> int:
     PDATA.load()
     logger.info("[PROGRAM START]")
     logger.debug("Configuration: " + repr(CONFIG))
@@ -124,16 +124,17 @@ def gui(args: list = []) -> int:
 
 
 def command_cmd(args: argparse.ArgumentParser = None) -> bool:
-    '''
+    """
     Returns true if arguments were passed to the program.  This will
     mean the user wants a command line!  YAYAYAYAYAYAY
-    '''
+    """
     return len(args) > 1
 
 
 if __name__ == "__main__":
     atexit.register(onexit)
 
-    if command_cmd(sys.argv): sys.exit(cmd(sys.argv[1:]))
+    if command_cmd(sys.argv):
+        sys.exit(cmd(sys.argv[1:]))
     logger.info("No arguments passed.  Starting graphical user interface.")
     sys.exit(gui(sys.argv))
