@@ -157,6 +157,7 @@ class EditBackupProfileWidget(QWidget):
     def _set_enabled_buttons(self):
         self.delete_profile_button.setEnabled(BackupProfile.getById(PDATA.profiles, self._profile.ID) is not None)
 
+
 class EditConfigurationWidget(QWidget):
     _loglevels = {
             "critical": logging.CRITICAL,
@@ -264,6 +265,7 @@ class EditConfigurationWidget(QWidget):
         layout = QVBoxLayout()
         for o in objects: layout.addWidget(o)
         return layout
+
 
 class EditPathListWidget(QWidget):
     '''
@@ -402,6 +404,7 @@ class EditPathListWidget(QWidget):
         self.entertextbutton.setEnabled(False)
         self.directorytextbox.setText(self._data[self.listbox.currentRow()] if itemselected else "")
 
+
 class ManageBackupsWidget(QWidget):
     '''
     CentralWidget:
@@ -474,6 +477,7 @@ class ManageBackupsWidget(QWidget):
             return
         if i < len(self._profiles):
             self.parent().setCentralWidget(EditBackupProfileWidget(self.parent(), self._profiles[i].ID))
+
 
 class ExecuteBackupWidget(QWidget):
     def __init__(self, parent, backup: BackupProfile):
@@ -634,6 +638,7 @@ class ExecuteBackupWidget(QWidget):
         if len(tempexecs) == 0:
             self.prunewidget.startProcess()
 
+
 class QBackupExecution(QWidget):
     removeself = pyqtSignal()
 
@@ -687,6 +692,7 @@ class QBackupExecution(QWidget):
     def _backup_finished(self):
         self.complete = True
         self.removeself.emit()
+
 
 class QPruneBackupExecution(QWidget):
     pruneCompleted = pyqtSignal()
