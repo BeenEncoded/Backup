@@ -7,6 +7,7 @@ from iterator import recursivecopy
 
 logger = logging.getLogger(__name__)
 
+
 class ProgressState:
     def __init__(self, total=1):
         self.prevpercent = 0.0
@@ -52,6 +53,7 @@ class ProgressState:
         if newbar is not None:
             if self.progressbar is not None: self.deleteProgressbar()
             self.progressbar = newbar
+
 
 def run_backup(backup: BackupProfile=None) -> None:
     destinations = [d for d in backup.destinations if os.path.isdir(d)]
@@ -113,10 +115,13 @@ def run_backup(backup: BackupProfile=None) -> None:
     
     print(f"{backup.name} COMPLETED")
 
+
 def load_named_profile(name: str="") -> BackupProfile:
     for p in PDATA.profiles:
-        if p.name == name: return p
+        if p.name == name:
+            return p
     return None
+
 
 def handle_queries(args) -> None:
     '''
@@ -134,7 +139,8 @@ def handle_queries(args) -> None:
         for name in recursivecopy.ERROR_TYPES.keys(): print(f"\t{name}")
         sys.exit(0)
 
-def run_commandline(args: argparse.ArgumentParser=None) -> int:
+
+def run_commandline(args: argparse.Namespace = None) -> int:
     handle_queries(args)
     if args.loglevel is not None:
         if args.loglevel in ["critical", "error", "warning", "info", "debug"]:

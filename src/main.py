@@ -15,12 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # First is logging:
-import commandline
-import logging
-import os
-import sys
-import atexit
-import argparse
+import commandline, logging, os, sys, atexit, argparse
 from typing import List
 from logging.handlers import RotatingFileHandler
 from UI.MainWindow import display_gui
@@ -98,18 +93,25 @@ def onexit():
     logger.info("[PROGRAM END]")
 
 
-def cmd(args: List[str] = []) -> int:
+def cmd(args: List[str] = None) -> int:
+    if args is None:
+        args = []
+
     PDATA.load()
     logger.info("[PROGRAM START]")
     logger.debug("Configuration: " + repr(CONFIG))
     logger.debug("ProgramData: " + str(PDATA))
-    arguments = setup_argparse().parse_args(
-        args)  # for some reason parse args takes it upon itself to terminate the goddamn program...
+
+    # for some reason parse args takes it upon itself to terminate the goddamn program...
+    arguments = setup_argparse().parse_args(args)
 
     return commandline.run_commandline(arguments)
 
 
-def gui(args: List[str] = []) -> int:
+def gui(args: List[str] = None) -> int:
+    if args is None:
+        args = []
+
     PDATA.load()
     logger.info("[PROGRAM START]")
     logger.debug("Configuration: " + repr(CONFIG))
@@ -117,17 +119,19 @@ def gui(args: List[str] = []) -> int:
 
     returnvalue = -1
     try:
-        returnvalue = display_gui(sys.argv)
+        returnvalue = display_gui(args)
     except:  # noqa E722
         logging.getLogger().exception("CRITICAL EXCEPTION")
     return returnvalue
 
 
-def command_cmd(args: argparse.ArgumentParser = None) -> bool:
+def command_cmd(args: List[str] = None) -> bool:
     """
     Returns true if arguments were passed to the program.  This will
     mean the user wants a command line!  YAYAYAYAYAYAY
     """
+    if args is None:
+        return False
     return len(args) > 1
 
 

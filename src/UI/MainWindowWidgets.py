@@ -636,14 +636,16 @@ class ExecuteBackupWidget(QWidget):
                 self.executions[x].hide()
         tempexecs = [e for e in self.executions if not e.isHidden()]
         if len(tempexecs) == 0:
-            self.prunewidget.startProcess()
+            self.prunewidget.start_process()
 
 
 class QBackupExecution(QWidget):
     removeself = pyqtSignal()
 
-    def __init__(self, parent, backup={"source": "", "destinations": [], "newdest": None}, manager:ThreadManager=None):
+    def __init__(self, parent, backup: dict = None, manager: ThreadManager = None):
         super(QBackupExecution, self).__init__(parent)
+        if backup is None:
+            backup = {"source": "", "destinations": [], "newdest": None}
 
         logger.info("instantiating new QBackupExecution: " + str(backup))
         self.complete = False
@@ -697,12 +699,12 @@ class QBackupExecution(QWidget):
 class QPruneBackupExecution(QWidget):
     pruneCompleted = pyqtSignal()
 
-    def __init__(self, parent, backup:BackupProfile=None, mapping: BackupMapping=None):
+    def __init__(self, parent, backup: BackupProfile = None, mapping: BackupMapping = None):
         super(QPruneBackupExecution, self).__init__(parent)
         self.prunethread = PruneBackupThread(backup, mapping)
 
         self._layout()
-        self._connectHandlers()
+        self._connect_handlers()
     
     def __del__(self):
         if self.prunethread is not None:
@@ -725,23 +727,23 @@ class QPruneBackupExecution(QWidget):
         mainlayout.addWidget(groupbox)
         self.setLayout(mainlayout)
     
-    def _connectHandlers(self)->None:
-        self.prunethread.statusUpdated.connect(self.updateProgress)
-        self.prunethread.finished.connect(self.completeOperation)
+    def _connect_handlers(self) -> None:
+        self.prunethread.statusUpdated.connect(self.update_progress)
+        self.prunethread.finished.connect(self.complete_operation)
 
-    def startProcess(self)->None:
+    def start_process(self) -> None:
         if self.isHidden():
             self.setVisible(True)
         self.prunethread.start()
 
     @pyqtSlot(ProcessStatus)
-    def updateProgress(self, status: ProcessStatus=None) -> None:
-        logger.debug(f"{QPruneBackupExecution.updateProgress.__qualname__}: signal caught.  Updating progressbar.")
+    def update_progress(self, status: ProcessStatus = None) -> None:
+        logger.debug(f"{QPruneBackupExecution.update_progress.__qualname__}: signal caught.  Updating progressbar.")
         self.progressbar.setValue(status.percent)
         self.statuslabel.setText(status.message)
 
     @pyqtSlot()
-    def completeOperation(self)->None:
-        logger.debug(f"{QPruneBackupExecution.completeOperation.__qualname__}: called -> raisining the pruneCompleted signal!")
+    def complete_operation(self) -> None:
+        logger.debug(f"{QPruneBackupExecution.complete_operation.__qualname__}: called -> raisining the pruneCompleted signal!")
         self.pruneCompleted.emit()
     
