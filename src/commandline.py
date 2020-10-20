@@ -24,22 +24,22 @@ class ProgressState:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.deleteProgressbar()
+        self.delete_progressbar()
 
-    def deleteProgressbar(self) -> None:
+    def delete_progressbar(self) -> None:
         if self.progressbar is not None:
             self.progressbar.close()
             self.progressbar = None
 
-    def printProgress(self, status: ProcessStatus = ProcessStatus(0.0, "")) -> None:
-        self.getProgressbar().update(float(math.floor(status.percent)) - self.prevpercent)
+    def print_progress(self, status: ProcessStatus = ProcessStatus(0.0, "")) -> None:
+        self.get_progressbar().update(float(math.floor(status.percent)) - self.prevpercent)
         if float(math.floor(status.percent)) != self.prevpercent:
             self.prevpercent = float(math.floor(status.percent))
 
-    def listError(self, error) -> None:
+    def list_error(self, error) -> None:
         self.errors.append(error)
 
-    def getProgressbar(self) -> tqdm.tqdm:
+    def get_progressbar(self) -> tqdm.tqdm:
         if self.progressbar is None:
             self.progressbar = tqdm.tqdm(total=100 * self.count)
         return self.progressbar
@@ -47,10 +47,10 @@ class ProgressState:
     def reset(self):
         self.prevpercent = 0.0
 
-    def setProgressbar(self, newbar: tqdm.tqdm = None) -> None:
+    def set_progressbar(self, newbar: tqdm.tqdm = None) -> None:
         if newbar is not None:
             if self.progressbar is not None:
-                self.deleteProgressbar()
+                self.delete_progressbar()
             self.progressbar = newbar
 
 
@@ -74,7 +74,7 @@ def run_backup(backup: BackupProfile = None) -> None:
             print(f"DESTINATION: {d}")
 
         backups = [Backup(data={"source": source, "destinations": destinations, "newdest": mapping[source]},
-                          com={"progressupdate": state.printProgress, "reporterror": state.listError, "finished": None})
+                          com={"progressupdate": state.print_progress, "reporterror": state.list_error, "finished": None})
                    for source in sources]
 
         if len(backups) == 0:
@@ -92,7 +92,7 @@ def run_backup(backup: BackupProfile = None) -> None:
 
         # execute all the backups:
         for b in backups:
-            state.getProgressbar().set_description(os.path.basename(b.source))
+            state.get_progressbar().set_description(os.path.basename(b.source))
             b.execute()
             state.reset()
         sys.stdout.flush()
@@ -111,8 +111,8 @@ def run_backup(backup: BackupProfile = None) -> None:
 
     # finally prune destinations that the user may have removed from their backup.
     with ProgressState() as state:
-        state.getProgressbar().set_description("Pruning the backup sources")
-        prune_backup(backup, mapping, state.printProgress)
+        state.get_progressbar().set_description("Pruning the backup sources")
+        prune_backup(backup, mapping, state.print_progress)
 
     print(f"{backup.name} COMPLETED")
 
