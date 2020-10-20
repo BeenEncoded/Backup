@@ -24,10 +24,10 @@ logger = logging.getLogger("data")
 
 
 class Configuration:
-    '''
-    This helps to centralize all code relating to saving, storing, getting, and 
+    """
+    This helps to centralize all code relating to saving, storing, getting, and
     initializing global program configuration.
-    '''
+    """
     home_directory: str = str(Path.home())
     program_home: str = (home_directory + os.sep + ".backup")
     filename: str = (program_home + os.sep + "backup.conf")
@@ -36,7 +36,7 @@ class Configuration:
         logger.debug("Configuration instantiated.")
 
         # set up the configuration, initializing it with some sane defaults
-        self.config = self._default_config()
+        self.config = Configuration._default_config()
 
         # here we make sure that we search for a config file, and
         # if none is loaded we write it.
@@ -45,17 +45,17 @@ class Configuration:
                            Configuration.filename)
             self.save()
 
-    # This function returns a default configuration.
-    def _default_config(self):
-        '''
+    @staticmethod
+    def _default_config():
+        """
         Returns the a default configuration for the entire program.
-        '''
+        """
         c = configparser.ConfigParser()
 
         c['DEFAULT'] = {
             "profilepath": os.path.join(Configuration.program_home, "backup_profiles.json"),
             "loglevel": "warning",
-            "ignorederrors": "" #a space-separated list of error types.  ex. "PathTooLongError PathNotWorkingError"
+            "ignorederrors": ""  # a space-separated list of error types.  ex. "PathTooLongError PathNotWorkingError"
         }
 
         c['ui'] = {
@@ -94,7 +94,7 @@ class Configuration:
 
 @dataclasses.dataclass
 class ProgramData:
-    '''
+    """
     Stores and manages all global program data aside from configuration.
     It requires the program configuration to save and load.
     It does not load anything on construction.  This is to allow wiping the program
@@ -102,7 +102,7 @@ class ProgramData:
 
     This object is not responsible for configuration manegement, loading, or saving.  It simply
     requires it for use in determining locations of files and such.
-    '''
+    """
 
     _config: Configuration = Configuration()
     profiles: list = dataclasses.field(default_factory=list)
@@ -200,10 +200,10 @@ class BackupProfile:
 
     @staticmethod
     def writejson(profiles, filename):
-        '''
+        """
         tojson(list[BackupProfile] profiles, string file)
         Writes a list of BackupProfile to a filename
-        '''
+        """
         with open(filename, 'w') as file:
             return json.dump(
                 [{"name": p.name, "sources": p.sources,
@@ -212,10 +212,10 @@ class BackupProfile:
 
     @staticmethod
     def readjson(filename):
-        '''
+        """
         fromjson(string rawjson)
-        returns a list[BackupProfile]        
-        '''
+        returns a list[BackupProfile]
+        """
         if os.path.isfile(filename):
             with open(filename, 'r') as file:
                 x = json.load(file)
@@ -250,21 +250,25 @@ class BackupMapping:
     backup_id: int = 0
 
     def generate_map(self, profile: BackupProfile = None) -> None:
-        if profile is None: raise TypeError(f"{BackupMapping.generate_map.__qualname__}: profile argument should not be None type!")
+        if profile is None:
+            raise TypeError(f"{BackupMapping.generate_map.__qualname__}: profile argument should not be None type!")
         self.backup_id = profile.ID
-        for source in profile.sources: self.map_source(source)
+        for source in profile.sources:
+            self.map_source(source)
 
     def synchronize_map(self, profile: BackupProfile = None) -> None:
-        '''
+        """
         ### synchronize_map(self, profile: BackupProfile=None) -> None
         syncs the map to a profile without re-assignment of pre-existing sources.
             :param profile: the backup profile
-        '''
+        """
         todelete = set(self.sourcemap.keys()).difference(set(profile.sources))
         toadd = set(profile.sources).difference(set(self.sourcemap.keys()))
 
-        for source in todelete: del self.sourcemap[source]
-        for source in toadd: self.sourcemap[source] = self._new_key()
+        for source in todelete:
+            del self.sourcemap[source]
+        for source in toadd:
+            self.sourcemap[source] = self._new_key()
 
     def __getitem__(self, key) -> str:
         """
@@ -280,42 +284,49 @@ class BackupMapping:
             return None
         return self.sourcemap[key]
 
-    def map_source(self, sourcepath: str="") -> None:
-        '''
+    def map_source(self, sourcepath: str = None) -> None:
+        """
         ### add_source(sourcepath: str="", destpath: str="") -> None
         Adds a source mapped to a destination.
             :param sourcepath: the source
-            :param destpath: the destination
-        '''
+        """
+        if not sourcepath:
+            sourcepath = ""
         self.sourcemap[sourcepath] = self._new_key()
     
     def remove_source(self, sourcepath: str = "") -> None:
-        '''
+        """
         ### remove_source(self, sourcepath: str = "") -> None
         Removes a source from the mapping.
             :param sourcepath: the source
-        '''
+        """
 
-        if sourcepath in self.sourcemap.keys(): del self.sourcemap[sourcepath]
+        if sourcepath in self.sourcemap.keys():
+            del self.sourcemap[sourcepath]
     
     def _new_key(self) -> str:
-        used_keys = [dest for _,dest in self.sourcemap.items()]
+        used_keys = [dest for _, dest in self.sourcemap.items()]
         key = int("0x01", 16)
-        while format(key, "03X") in used_keys: key += 1
+        while format(key, "03X") in used_keys:
+            key += 1
         return format(key, "03X")
 
-    def save(self, filename: typing.AnyStr, overwrite: bool=True) -> bool:
-        '''
+    def save(self, filename: typing.AnyStr, overwrite: bool = True) -> bool:
+        """
         ### save(self, filename: str="") -> bool
         Saves the sourcemapping to the specified file.
             :param filename: the path to the file that this map will be saved to.
+            :param overwrite: bool, Normally a backup mapping only needs to be saved once.  If
+                                    a new mapping must be created (to add or removed sources) then
+                                    you must overwrite the old mapping.
 
             :returns bool: True if the file was saved successfully.
-        '''
+        """
         success = False
         if not os.path.isfile(filename) or overwrite:
             with open(filename, 'wt') as file:
-                json.dump(obj={"backupid": self.backup_id, "mapping": self.sourcemap}, fp=file, indent=4, sort_keys=True)
+                json.dump(
+                    obj={"backupid": self.backup_id, "mapping": self.sourcemap}, fp=file, indent=4, sort_keys=True)
                 success = True
                 logger.info(f"Attempted to save mapping to \"{filename}\"  exists = {os.path.exists(filename)}")
         return success
@@ -329,11 +340,15 @@ class BackupMapping:
                 return True
         return False
 
-    def try_load(self, folders: list=[], config: Configuration=None) -> bool:
+    def try_load(self, folders: List[str] = None, config: Configuration = None) -> bool:
+        if folders is None:
+            folders = []
+
         filename = config["BackupBehavior"]["sourcemapname"]
-        if len(folders) == 0: return False
-        if len(filename) == 0: return False
-        path = None
+        if len(folders) == 0:
+            return False
+        if len(filename) == 0:
+            return False
         for folder in folders:
             if os.path.isdir(folder) and not os.path.islink(folder):
                 path = (folder + os.path.sep + filename)
@@ -342,11 +357,15 @@ class BackupMapping:
                     return True
         return False
     
-    def try_save(self, folders: list=[], config: Configuration=None, overwrite: bool=True) -> bool:
+    def try_save(self, folders: List[str] = None, config: Configuration = None, overwrite: bool = True) -> bool:
+        if folders is None:
+            folders = []
+
         filename = config["BackupBehavior"]["sourcemapname"]
-        if len(folders) == 0: return False
-        if len(filename) == 0: return False
-        path = None
+        if len(folders) == 0:
+            return False
+        if len(filename) == 0:
+            return False
         success = False
         for folder in folders:
             if os.path.isdir(folder) and not os.path.islink(folder):
