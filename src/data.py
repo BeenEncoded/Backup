@@ -14,7 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 import json, os, configparser, dataclasses, logging, typing
+from dataclasses import field
+from typing import List
 from pathlib import Path
 
 logger = logging.getLogger("data")
@@ -88,6 +91,7 @@ class Configuration:
     def __setitem__(self, key, value):
         self.config[key] = value
 
+
 @dataclasses.dataclass
 class ProgramData:
     '''
@@ -125,7 +129,7 @@ class ProgramData:
         self.profiles = BackupProfile.readjson(
             self._config['DEFAULT']['profilepath'])
         # now we re-assign the ids because the json could have been edited by the luser...
-        BackupProfile.reassignAllIds(self.profiles)
+        BackupProfile.reassign_all_ids(self.profiles)
         logger.debug("backup profiles loaded")
 
     def _save_profiles(self):
@@ -147,15 +151,15 @@ class BackupProfile:
             "      Sources: " + str(self.sources) + \
             "      Destinations: " + str(self.destinations)
 
-    def assignID(self, profiles):
+    def assign_id(self, profiles: List[BackupProfile]):
         logger.debug("Assigning a new id to backup profile: " + self.name)
         ids = [e.ID for e in profiles]
         self.ID = 0
         while self.ID in ids:
             self.ID += 1
-        logger.debug("New id for \"" + self.name + "\" is " + str(self.ID))
+        logger.debug(f"New id for \"{self.name}\" is {str(self.ID)}")
 
-    def find_mapping(self, config: Configuration=None):
+    def find_mapping(self, config: Configuration = None):
         # attempt to load the backup map from one of the destination directories if
         # they exist (and at least one of them should...)
         # if none can be loaded a new one is generated.
@@ -173,13 +177,13 @@ class BackupProfile:
         return backupmapping
 
     @staticmethod
-    def getById(profiles, id):
-        '''
+    def get_by_id(profiles, profid: int):
+        """
         Returns the profile with the matching ID, or None if no profile
         or multiple profiles with the same ID was found.
-        '''
-        logger.debug("Finding backup profile with id: " + str(id))
-        matches = [p for p in profiles if p.ID == id]
+        """
+        logger.debug("Finding backup profile with id: " + str(profid))
+        matches = [p for p in profiles if p.ID == profid]
         if len(matches) == 0:
             return None
         elif len(matches) == 1:
@@ -187,10 +191,12 @@ class BackupProfile:
         return None
 
     @staticmethod
-    def reassignAllIds(profiles):
+    def reassign_all_ids(profiles: List[BackupProfile]):
         logger.debug("Reassigning all backup profile ids.")
-        for p in profiles: p.ID = -1
-        for p in profiles: p.assignID(profiles)
+        for p in profiles:
+            p.ID = -1
+        for p in profiles:
+            p.assign_id(profiles)
 
     @staticmethod
     def writejson(profiles, filename):
@@ -216,15 +222,19 @@ class BackupProfile:
                 return [_profile_from_dict(entry) for entry in x]
         return []
 
-def _profile_from_dict(profile: dict = {"name": "", "sources": [], "destinations": [], "id": 0}) -> BackupProfile:
+
+def _profile_from_dict(profile: dict = None) -> BackupProfile:
+    if profile is None:
+        profile = {"name": "", "sources": [], "destinations": [], "id": 0}
     return BackupProfile(profile["name"], profile["sources"], profile["destinations"], profile["id"])
+
 
 @dataclasses.dataclass
 class BackupMapping:
-    '''
-    This data structure represents a mapping between the source and destination directories of 
+    """
+    This data structure represents a mapping between the source and destination directories of
     a backup.  It is a good idea to always have one for a backup so that restore functionality can be provided.
-    Basically each path that is backed up from the source has an arbitrary destination.  Moreover, 
+    Basically each path that is backed up from the source has an arbitrary destination.  Moreover,
     a source cannot possibly be derived from its destination basename, so we need a way that
     we can persistently map original source paths to their destinations.
 
@@ -233,18 +243,18 @@ class BackupMapping:
     no intention of making things dificult if for some reason I need to make a minor change.
     This will also make it far easier to add other metadata to a backup should that become necessary
     in the future.
-    '''
+    """
 
     #a map of fully qualified source directory names and the basenames of the destination folders.
-    sourcemap: typing.Dict[str, str]=dataclasses.field(default_factory=dict)
+    sourcemap: typing.Dict[str, str] = field(default_factory=dict)
     backup_id: int = 0
 
-    def generate_map(self, profile: BackupProfile=None) -> None:
+    def generate_map(self, profile: BackupProfile = None) -> None:
         if profile is None: raise TypeError(f"{BackupMapping.generate_map.__qualname__}: profile argument should not be None type!")
         self.backup_id = profile.ID
         for source in profile.sources: self.map_source(source)
 
-    def synchronize_map(self, profile: BackupProfile=None) -> None:
+    def synchronize_map(self, profile: BackupProfile = None) -> None:
         '''
         ### synchronize_map(self, profile: BackupProfile=None) -> None
         syncs the map to a profile without re-assignment of pre-existing sources.
@@ -257,16 +267,17 @@ class BackupMapping:
         for source in toadd: self.sourcemap[source] = self._new_key()
 
     def __getitem__(self, key) -> str:
-        '''
+        """
         ### __getitem__(self, key) -> str
         Gets the destination basename associated with the key.
 
             :param key: the source path.
 
-            :returns str|None: the new destination basename that has been associated with the source path, or 
+            :returns str|None: the new destination basename that has been associated with the source path, or
                                None if there is no associated destination path assigned.
-        '''
-        if key not in self.sourcemap.keys(): return None
+        """
+        if key not in self.sourcemap.keys():
+            return None
         return self.sourcemap[key]
 
     def map_source(self, sourcepath: str="") -> None:

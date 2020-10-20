@@ -58,12 +58,12 @@ class EditBackupProfileWidget(QWidget):
         super(EditBackupProfileWidget, self).__init__(par)
         profiles = PDATA.profiles
         if profile_id > -1:
-            self._profile = BackupProfile.getById(profiles, profile_id)
+            self._profile = BackupProfile.get_by_id(profiles, profile_id)
             if self._profile is None:
                 raise BackupProfileNotFoundError("Profile with id " + str(profile_id) + " could not be found!")
         else:
             self._profile = BackupProfile()
-            self._profile.assignID(profiles)
+            self._profile.assign_id(profiles)
         self._init_layout()
         self._apply_profile_to_fields()
         self._connect_handlers()
@@ -119,7 +119,7 @@ class EditBackupProfileWidget(QWidget):
         logger.warning("delete button clicked")
         global PDATA
         profiles = PDATA.profiles
-        if BackupProfile.getById(profiles, self._profile.ID) is not None:
+        if BackupProfile.get_by_id(profiles, self._profile.ID) is not None:
             for x in range(0, len(profiles)):
                 if profiles[x].ID == self._profile.ID:
                     logger.warning("Deleted profile " + str(profiles[x]))
@@ -134,7 +134,7 @@ class EditBackupProfileWidget(QWidget):
     def _finish_editing_profile(self):
         global PDATA
         profiles = PDATA.profiles
-        if BackupProfile.getById(profiles, self._profile.ID) is not None:
+        if BackupProfile.get_by_id(profiles, self._profile.ID) is not None:
             for x in range(0, len(profiles)):
                 if profiles[x].ID == self._profile.ID:
                     profiles[x] = self._profile
@@ -142,7 +142,7 @@ class EditBackupProfileWidget(QWidget):
                     self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
                     break
         else:
-            self._profile.assignID(profiles)
+            self._profile.assign_id(profiles)
             profiles.append(self._profile)
             PDATA.profiles = profiles
             PDATA.save()
@@ -155,7 +155,7 @@ class EditBackupProfileWidget(QWidget):
 
     @pyqtSlot()
     def _set_enabled_buttons(self):
-        self.delete_profile_button.setEnabled(BackupProfile.getById(PDATA.profiles, self._profile.ID) is not None)
+        self.delete_profile_button.setEnabled(BackupProfile.get_by_id(PDATA.profiles, self._profile.ID) is not None)
 
 
 class EditConfigurationWidget(QWidget):
