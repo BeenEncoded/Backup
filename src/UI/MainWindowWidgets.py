@@ -212,12 +212,12 @@ class EditConfigurationWidget(QWidget):
         self.setLayout(mainlayout)
 
     def _connectHandlers(self) -> None:
-        self.doneButton.clicked.connect(self.saveAndQuit)
+        self.doneButton.clicked.connect(self.save_and_quit)
         self.cancelButton.clicked.connect(self.cancelAndQuit)
         self.fonteditbutton.clicked.connect(self.setFont)
 
     @pyqtSlot()
-    def saveAndQuit(self) -> None:
+    def save_and_quit(self) -> None:
         logger.info("Saving configuration and quitting the config edit menu.")
         self._apply_changes()
         CONFIG.save()
