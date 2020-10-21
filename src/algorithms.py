@@ -56,13 +56,13 @@ class Backup:
         try:
             self.abort = False
             if len(self.destinations) == 0:
-                self.raiseFinished()
+                self.raise_finished()
                 logger.warning("No destination folders, doing nothing.  Backup aborting.")
                 return
             sources_copied = 0
 
             self.status = ProcessStatus(0.0, "Perparing...")
-            self.updateStatus(self.status)
+            self.update_status(self.status)
             sources_count = sum((len(files) + len(dirs)) for _, dirs, files in os.walk(self.source))
 
             self.status.message = "Copying..."
@@ -86,77 +86,77 @@ class Backup:
                 if errors is not None:
                     for error in errors:
                         if type(error) not in self.ignored_errors: 
-                            self.reportError(error)
+                            self.report_error(error)
                 sources_copied += 1
                 self.status.message = self._display_string(iterator.current)
                 if sources_count > 0: self.status.percent = ((sources_copied * 100) / sources_count)
-                self.updateStatus(self.status)
+                self.update_status(self.status)
             
             self.status.percent = 100
-            self.updateStatus(self.status)
+            self.update_status(self.status)
 
             logger.info("Executing pruneing algorithm.")
             if not self.abort:
                 for dest in self.destinations:
                     self.status.message = f"Pruning \"{dest}\""
                     logger.info("Pruning \"%s\"", dest)
-                    self.updateStatus(self.status)
-                    self._pruneDestination(self.source, dest)
+                    self.update_status(self.status)
+                    self._prune_destination(self.source, dest)
             
             logger.info("Pruning finished.")
-            self.raiseFinished()
+            self.raise_finished()
         except: # noqa E722
             logger.critical("Uncaught exception in a backup algorithm!")
             logger.exception("CRITICAL EXCEPTION; " + str({"source": self.source, "destinations": self.destinations}))
-            self.raiseFinished()
+            self.raise_finished()
     
-    def _pruneDestination(self, source: str="", destination: str="") -> int:
+    def _prune_destination(self, source: str="", destination: str="") -> int:
         '''
         Prunes the destination.
         Returns the number of file objects a delete was executed on successfully.
         Folders count as 1.  rmtree is used on those.
         '''
-        logger.debug(f"{Backup._pruneDestination.__qualname__}: called")
+        logger.debug(f"{Backup._prune_destination.__qualname__}: called")
         deletecount = 0
         if self.abort:
             return 0
         for element in recursiveprune(source, destination, self.newdestname):
             if self.abort: break
-            if not self._deletePath(element):
+            if not self._delete_path(element):
                 logger.error(f"Prune: could not delete \"{element}\"")
             else:
-                self.updateStatus(ProcessStatus(percent=100, message=f"Deleted \"{element}\""))
+                self.update_status(ProcessStatus(percent=100, message=f"Deleted \"{element}\""))
                 logger.warning(f"Deleted while pruning: \"{element}\"")
                 deletecount += 1
             if self.abort: break
         return deletecount
     
-    def _deletePath(self, path: str="") -> bool:
+    def _delete_path(self, path: str="") -> bool:
         if not os.path.exists(path):
             return True
         if os.path.islink(path) or os.path.isfile(path):
             os.remove(path)
         elif os.path.isdir(path):
-            shutil.rmtree(path, onerror=self.rmtree_onError)
+            shutil.rmtree(path, onerror=self.rmtree_onerror)
         return not os.path.exists(path)
     
-    def rmtree_onError(self, function, path, excinfo) -> None:
+    def rmtree_onerror(self, function, path, excinfo) -> None:
         errormessage = ("rmtree: I don't know what heppened... Here's some data:" + os.linesep + 
             f"function: {str(function)}" + os.linesep + 
             f"path: \"{path}\"" + os.linesep + 
             f"excinfo: {str(excinfo)}")
-        self.reportError(recursivecopy.UnexpectedError(message=errormessage))
+        self.report_error(recursivecopy.UnexpectedError(message=errormessage))
         logger.error(errormessage)
 
-    def raiseFinished(self) -> None:
+    def raise_finished(self) -> None:
         if self.finishedcallback is not None:
             self.finishedcallback()
 
-    def reportError(self, error: recursivecopy.UnexpectedError = None) -> None:
+    def report_error(self, error: recursivecopy.UnexpectedError = None) -> None:
         if self.report_error is not None:
             self.report_error(error)
     
-    def updateStatus(self, status: ProcessStatus=ProcessStatus(0.0, "DEFAULT STATUS")) -> None:
+    def update_status(self, status: ProcessStatus=ProcessStatus(0.0, "DEFAULT STATUS")) -> None:
         if self.update_progress is not None:
             self.update_progress(status)
 
@@ -165,8 +165,8 @@ class Backup:
         return s
 
 def prune_backup(backup: BackupProfile=None, mapping: BackupMapping=None, updateStatus=None, finished=None) -> None:
-    def _tdeletePath(path: str="") -> bool:
-        def rmtree_onError(function, path, excinfo) -> None:
+    def _tdelete_path(path: str="") -> bool:
+        def rmtree_onerror(function, path, excinfo) -> None:
             errormessage = ("rmtree: I don't know what heppened... Here's some data:" + os.linesep + 
                 f"function: {str(function)}" + os.linesep + 
                 f"path: \"{path}\"" + os.linesep + 
@@ -178,7 +178,7 @@ def prune_backup(backup: BackupProfile=None, mapping: BackupMapping=None, update
         if os.path.islink(path) or os.path.isfile(path):
             os.remove(path)
         elif os.path.isdir(path):
-            shutil.rmtree(path, onerror=rmtree_onError)
+            shutil.rmtree(path, onerror=rmtree_onerror)
         return not os.path.exists(path)
     
     if len(backup.destinations) == 0:
@@ -213,7 +213,7 @@ def prune_backup(backup: BackupProfile=None, mapping: BackupMapping=None, update
     x = 0
     for d in todel:
         logger.warning(f"Pruning algorithm deleteing path: \"{d}\"")
-        _tdeletePath(d)
+        _tdelete_path(d)
         x += 1
         if updateStatus is not None: updateStatus(ProcessStatus((x / len(todel) * 100), "Pruning Backup"))
 

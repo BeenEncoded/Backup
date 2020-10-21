@@ -18,7 +18,7 @@
 import commandline, logging, os, sys, atexit, argparse
 from typing import List
 from logging.handlers import RotatingFileHandler
-from UI.MainWindow import display_gui
+from UI.main_window import display_gui
 
 from globaldata import LOGFILE, LOGS_FOLDER, LOG_LEVEL, PDATA, CONFIG
 

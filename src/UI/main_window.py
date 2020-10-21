@@ -34,8 +34,8 @@ class MainWindow(QMainWindow):
         
         self.setCentralWidget(ManageBackupsWidget(self))
         self._apply_configuration()
-        self.logShortcut = QShortcut(QKeySequence("Ctrl+L"), self)
-        self.logShortcut.activated.connect(self._show_log_window)
+        self.log_shortcut = QShortcut(QKeySequence("Ctrl+L"), self)
+        self.log_shortcut.activated.connect(self._show_log_window)
         self.logwindow = LogWindow()
         logger.info("Maindow set up.")
         self.show()
@@ -54,7 +54,7 @@ class MainWindow(QMainWindow):
         logger.debug("Ctrl+L pressed")
         self.logwindow.show()
 
-    def closeEvent(self, event):
+    def close_event(self, event):
         logger.debug("MainWindow closed.")
         self.logwindow.allowclose = True
         self.logwindow.close()
@@ -133,13 +133,13 @@ class LogWindow(QWidget):
     def _connect(self):
         self.log_handler.qcom.logtowindow.connect(self._log_to_window)
     
-    def closeEvent(self, event):
+    def close_event(self, event):
         if self.allowclose:
-            logger.debug(self.closeEvent.__qualname__ + ": closing log window")
+            logger.debug(self.close_event.__qualname__ + ": closing log window")
             logging.getLogger().removeHandler(self.log_handler)
             self.close()
         else:
-            logger.debug(self.closeEvent.__qualname__ + ": hiding log window")
+            logger.debug(self.close_event.__qualname__ + ": hiding log window")
             self.hide()
 
     @pyqtSlot(str)

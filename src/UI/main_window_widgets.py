@@ -186,11 +186,11 @@ class EditConfigurationWidget(QWidget):
 
         settinggroup = QGroupBox("Settings")
         gboxlayout = QVBoxLayout()
-        self.loglevelBox = QComboBox()
-        self.loglevelBox.addItems(EditConfigurationWidget._loglevels.keys())
-        self.loglevelBox.setToolTip("While debug will show the most information, it " + 
+        self.loglevel_box = QComboBox()
+        self.loglevel_box.addItems(EditConfigurationWidget._loglevels.keys())
+        self.loglevel_box.setToolTip("While debug will show the most information, it " + 
             "can have a large performance impact.  Warning is the recommended level.")
-        gboxlayout.addLayout(self._hlayout(QLabel("Log Level: "), self.loglevelBox))
+        gboxlayout.addLayout(self._hlayout(QLabel("Log Level: "), self.loglevel_box))
 
         self.fonteditbutton = QPushButton("")
         gboxlayout.addWidget(self.fonteditbutton)
@@ -205,15 +205,15 @@ class EditConfigurationWidget(QWidget):
         mainlayout.addWidget(settinggroup)
         mainlayout.addStretch()
 
-        self.doneButton = QPushButton("Save")
-        self.cancelButton = QPushButton("Cancel")
-        mainlayout.addLayout(self._hlayout(self.doneButton, self.cancelButton))
+        self.done_button = QPushButton("Save")
+        self.cancel_button = QPushButton("Cancel")
+        mainlayout.addLayout(self._hlayout(self.done_button, self.cancel_button))
 
         self.setLayout(mainlayout)
 
     def _connectHandlers(self) -> None:
-        self.doneButton.clicked.connect(self.save_and_quit)
-        self.cancelButton.clicked.connect(self.cancelAndQuit)
+        self.done_button.clicked.connect(self.save_and_quit)
+        self.cancel_button.clicked.connect(self.cancelAndQuit)
         self.fonteditbutton.clicked.connect(self.setFont)
 
     @pyqtSlot()
@@ -240,7 +240,7 @@ class EditConfigurationWidget(QWidget):
             self.fonteditbutton.setText(f"Font: {self.newfont.family()} {str(self.newfont.pointSize())}")
 
     def _update_inputs(self) -> None:
-        self.loglevelBox.setCurrentText(CONFIG["DEFAULT"]["loglevel"])
+        self.loglevel_box.setCurrentText(CONFIG["DEFAULT"]["loglevel"])
         self.fonteditbutton.setText(f"Font: {CONFIG['ui']['font']} {CONFIG['ui']['font_size']}")
         self.threadbox.setValue(int(CONFIG['BackupBehavior']['threadcount']))
         if self.newfont is not None:
@@ -248,7 +248,7 @@ class EditConfigurationWidget(QWidget):
 
     def _apply_changes(self) -> None:
         global CONFIG
-        CONFIG["DEFAULT"]["loglevel"] = self.loglevelBox.currentText()
+        CONFIG["DEFAULT"]["loglevel"] = self.loglevel_box.currentText()
         logging.getLogger().setLevel(EditConfigurationWidget._loglevels[CONFIG["DEFAULT"]["loglevel"]])
         if self.newfont is not None:
             CONFIG['ui']['font'] = self.newfont.family()
