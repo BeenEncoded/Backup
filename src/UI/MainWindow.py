@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QWidget, QApplication
 from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
 from PyQt5.QtGui import QFont, QKeySequence
 
-from UI.MainWindowWidgets import ManageBackupsWidget, EditConfigurationWidget, ExecuteBackupWidget
+from UI.main_window_widgets import ManageBackupsWidget, EditConfigurationWidget, ExecuteBackupWidget
 from globaldata import CONFIG, VERSION
 import logging
 
