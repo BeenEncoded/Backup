@@ -99,8 +99,8 @@ def cmd(args: List[str] = None) -> int:
 
     PDATA.load()
     logger.info("[PROGRAM START]")
-    logger.debug("Configuration: " + repr(CONFIG))
-    logger.debug("ProgramData: " + str(PDATA))
+    logger.debug("Configuration: %s", repr(CONFIG))
+    logger.debug("ProgramData: %s", str(PDATA))
 
     # for some reason parse args takes it upon itself to terminate the goddamn program...
     arguments = setup_argparse().parse_args(args)
