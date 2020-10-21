@@ -15,9 +15,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # First is logging:
-import commandline, logging, os, sys, atexit, argparse
+from __future__ import annotations
+import logging
+import os
+import sys
+import atexit
+import argparse
 from typing import List
 from logging.handlers import RotatingFileHandler
+import commandline
 from UI.main_window import display_gui
 
 from globaldata import LOGFILE, LOGS_FOLDER, LOG_LEVEL, PDATA, CONFIG

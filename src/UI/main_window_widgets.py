@@ -173,7 +173,7 @@ class EditConfigurationWidget(QWidget):
 
         self.newfont = None
         self._update_inputs()
-    
+
     def __del__(self):
         pass
 
