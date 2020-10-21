@@ -13,6 +13,7 @@ class ProcessStatus:
     percent: float = 0.0
     message: str = str()
 
+
 class Backup:
     '''
     This object encapsulates the backup algorithm in a portable way.  It backs up a single source
@@ -20,8 +21,8 @@ class Backup:
     update another thread on what is happening or provide progress updates throughout the process.
     '''
 
-    def __init__(self, 
-        data: dict={"source": "", "destinations": [], "newdest": None}, 
+    def __init__(self,
+        data: dict={"source": "", "destinations": [], "newdest": None},
         com: dict={"progressupdate": None, "reporterror": None, "finished": None}):
         '''
         Creates a Backup object containing all the information needed to move forward with the backup.
@@ -46,7 +47,8 @@ class Backup:
         self.status = ProcessStatus(0.0, "Nothing is happening yet...")
         
         self.ignored_errors = [recursivecopy.ERROR_TYPES[key] for key in recursivecopy.ERROR_TYPES.keys() if key in CONFIG["DEFAULT"]["ignorederrors"]]
-        if len(self.ignored_errors) > 0: logger.info(f"Ignoring error types: {repr(self.ignored_errors)}")
+        if len(self.ignored_errors) > 0:
+            logger.info("Ignoring error types: %s", repr(self.ignored_errors))
         else: logger.info("All errors will be shown.")
     
     def execute(self):
@@ -62,10 +64,10 @@ class Backup:
             self.status = ProcessStatus(0.0, "Perparing...")
             self.updateStatus(self.status)
             sources_count = sum((len(files) + len(dirs)) for _, dirs, files in os.walk(self.source))
-            
+
             self.status.message = "Copying..."
             self.status.percent = 0.0
-            logger.info(f"Executing copy on \"{self.source}\"")
+            logger.info("Executing copy on \"%s\"", self.source)
 
             #initialize the iterator.
             iterator = None
@@ -93,15 +95,15 @@ class Backup:
             self.status.percent = 100
             self.updateStatus(self.status)
 
-            logger.info(f"Executing pruneing algorithm.")
+            logger.info("Executing pruneing algorithm.")
             if not self.abort:
                 for dest in self.destinations:
                     self.status.message = f"Pruning \"{dest}\""
-                    logger.info(f"Pruning \"{dest}\"")
+                    logger.info("Pruning \"%s\"", dest)
                     self.updateStatus(self.status)
                     self._pruneDestination(self.source, dest)
             
-            logger.info(f"Pruning finished.")
+            logger.info("Pruning finished.")
             self.raiseFinished()
         except: # noqa E722
             logger.critical("Uncaught exception in a backup algorithm!")
