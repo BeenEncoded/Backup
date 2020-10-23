@@ -14,7 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import os, typing, logging
+from __future__ import annotations
+import os
+import logging
+from typing import Tuple, List
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton
 from PyQt5.QtWidgets import QLineEdit, QGroupBox, QLabel, QFileDialog, QAbstractItemView
@@ -169,7 +172,7 @@ class EditConfigurationWidget(QWidget):
     def __init__(self, parent):
         super(EditConfigurationWidget, self).__init__(parent)
         self._layout()
-        self._connectHandlers()
+        self._connect_handlers()
 
         self.newfont = None
         self._update_inputs()
@@ -211,10 +214,10 @@ class EditConfigurationWidget(QWidget):
 
         self.setLayout(mainlayout)
 
-    def _connectHandlers(self) -> None:
+    def _connect_handlers(self) -> None:
         self.done_button.clicked.connect(self.save_and_quit)
-        self.cancel_button.clicked.connect(self.cancelAndQuit)
-        self.fonteditbutton.clicked.connect(self.setFont)
+        self.cancel_button.clicked.connect(self.cancel_and_quit)
+        self.fonteditbutton.clicked.connect(self.set_font)
 
     @pyqtSlot()
     def save_and_quit(self) -> None:
@@ -224,7 +227,7 @@ class EditConfigurationWidget(QWidget):
         self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
 
     @pyqtSlot()
-    def cancelAndQuit(self) -> None:
+    def cancel_and_quit(self) -> None:
         logger.info("Quitting the configuration menu without saving.")
         self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
 
@@ -233,7 +236,7 @@ class EditConfigurationWidget(QWidget):
         self.parent().setFont(QFont(str(CONFIG['ui']['font']), int(CONFIG['ui']['font_size'])))
 
     @pyqtSlot()
-    def setFont(self) -> None:
+    def set_font(self) -> None:
         self.newfont, ok = QFontDialog.getFont(self.newfont if self.newfont else QFont(str(CONFIG['ui']['font']), int(CONFIG['ui']['font_size'])), self)
         if ok:
             self.parent().setFont(self.newfont)
@@ -536,7 +539,7 @@ class ExecuteBackupWidget(QWidget):
         if hasattr(self, "prunewidget"):
             self.prunewidget.pruneCompleted.connect(self._onPruneComplete)
     
-    def _invalid_paths(self, backup_profile) -> (typing.List[str], typing.List[str]):
+    def _invalid_paths(self, backup_profile) -> Tuple[List[str], List[str]]:
         '''
         makes sure that all the paths in the passed profile are ok.  This function
         should return true if and only if the souces and destiations of the backup
