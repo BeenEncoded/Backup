@@ -15,7 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import os, shutil, typing, logging, enum, re, sys
+import os
+import shutil
+import typing
+import logging
+import enum
+import re
+import sys
 
 logger = logging.getLogger("filesystem.iterator")
 
@@ -93,9 +99,9 @@ class recursivecopy:
     It is expected that if /a/b/c is copied into /z, then the result should
     be /z/c/*, where * represents the contents of /a/b/c.
 
-    An optional argument <code>predicate(str: source_path, str: source_destination)</code> can 
+    An optional argument <code>predicate(str: source_path, str: source_destination)</code> can
     be used to define the condition under which a copy operation proceeds.
-    By applying a predicate you can do things like skip files that have not 
+    By applying a predicate you can do things like skip files that have not
     changed, or only copy a specific type of file.
 
     Occassionally a path will be skipped.  This can happend when the predicate returns False or
