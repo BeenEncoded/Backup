@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import logging
 from PyQt5.QtWidgets import QMainWindow, QShortcut, QMessageBox, QPlainTextEdit
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QApplication
 from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
@@ -21,14 +22,13 @@ from PyQt5.QtGui import QFont, QKeySequence
 
 from UI.main_window_widgets import ManageBackupsWidget, EditConfigurationWidget, ExecuteBackupWidget
 from globaldata import CONFIG, VERSION
-import logging
 
-logger = logging.getLogger("UI.MainWindow")
+logger = logging.getLogger(__name__)
 
 class MainWindow(QMainWindow):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget):
         logger.info("Initializing MainWindow")
-        super(MainWindow, self).__init__(parent)
+        super(parent)
         self.statusBar().setEnabled(True)
         self._add_menubar()
         
