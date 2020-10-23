@@ -1,6 +1,8 @@
 from __future__ import annotations
-import logging, os, shutil, dataclasses
-from typing import Dict, List
+import logging
+import os
+import shutil
+import dataclasses
 
 from iterator import recursivecopy, recursiveprune, copypredicate
 from data import BackupProfile, BackupMapping
