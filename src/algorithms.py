@@ -1,4 +1,6 @@
+from __future__ import annotations
 import logging, os, shutil, dataclasses
+from typing import Dict, List
 
 from iterator import recursivecopy, recursiveprune, copypredicate
 from data import BackupProfile, BackupMapping
@@ -21,9 +23,7 @@ class Backup:
     update another thread on what is happening or provide progress updates throughout the process.
     '''
 
-    def __init__(self,
-        data: dict={"source": "", "destinations": [], "newdest": None},
-        com: dict={"progressupdate": None, "reporterror": None, "finished": None}):
+    def __init__(self, data: dict=None, com: dict=None):
         '''
         Creates a Backup object containing all the information needed to move forward with the backup.
         data:  a dictionary containing a single source and an array of destinations.
@@ -36,12 +36,16 @@ class Backup:
             reporterror(recursivecopy.UnexpectedError)
             finished()
         '''
+        if data is None:
+            data = {"source": "", "destinations": [], "newdest": None}
+        if com is None:
+            com = {"progressupdate": None, "reporterror": None, "finished": None}
 
         self.source = data["source"]
         self.destinations = data["destinations"]
         self.newdestname = data["newdest"]
         self.update_progress = com["progressupdate"]
-        self.report_error = com["reporterror"]
+        self.report_error_callback = com["reporterror"]
         self.finishedcallback = com["finished"]
         self.abort = False
         self.status = ProcessStatus(0.0, "Nothing is happening yet...")
@@ -153,8 +157,8 @@ class Backup:
             self.finishedcallback()
 
     def report_error(self, error: recursivecopy.UnexpectedError = None) -> None:
-        if self.report_error is not None:
-            self.report_error(error)
+        if self.report_error_callback is not None:
+            self.report_error_callback(error)
     
     def update_status(self, status: ProcessStatus=ProcessStatus(0.0, "DEFAULT STATUS")) -> None:
         if self.update_progress is not None:
