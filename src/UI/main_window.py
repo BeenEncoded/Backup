@@ -131,7 +131,7 @@ class LogWindow(QWidget):
         self.setFont(QFont(str(uiconfig['font']), int(uiconfig['font_size'])))
     
     def _connect(self):
-        self.log_handler.qcom.logtowindow.connect(self._log_to_window)
+        self.log_handler.qcom.LOGTOWINDOW.connect(self._log_to_window)
     
     def close_event(self, event):
         if self.allowclose:
@@ -167,7 +167,7 @@ class LogWindow(QWidget):
 
     class WindowLogHandler(logging.Handler):
         class QComObject(QObject):
-            logtowindow = pyqtSignal(str)
+            LOGTOWINDOW = pyqtSignal(str)
 
         def __init__(self, window):
             super(LogWindow.WindowLogHandler, self).__init__()
@@ -176,7 +176,7 @@ class LogWindow(QWidget):
             self.qcom = LogWindow.WindowLogHandler.QComObject()
 
         def emit(self, record):
-            self.qcom.logtowindow.emit(self.format(record))
+            self.qcom.LOGTOWINDOW.emit(self.format(record))
 
 def display_gui(argv):
     logger.debug("display_gui called with args: " + str(argv))
