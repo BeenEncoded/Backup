@@ -48,10 +48,11 @@ def setup_logging():
     sh.setFormatter(f)
     fh.setFormatter(f)
 
-    if len(sys.argv) <= 1: root.addHandler(sh)
+    if len(sys.argv) <= 1:
+        root.addHandler(sh)
     root.addHandler(fh)
     root.setLevel(LOG_LEVEL)
-    root.info("log level: " + str(LOG_LEVEL))
+    root.info("log level: %d", LOG_LEVEL)
 
 
 setup_logging()
@@ -62,13 +63,16 @@ def validate_source(d: str = "") -> bool:
     if os.path.isdir(d):
         return True
     raise argparse.ArgumentTypeError(
-        r"The source folder is not a directory.  Please pass a path that represents an existing folder.")
+        "The source folder is not a directory.  " +
+        "Please pass a path that represents an existing folder.")
 
 
 def validate_destination(d: str = "") -> bool:
-    if os.path.isdir(d): return True
+    if os.path.isdir(d):
+        return True
     raise argparse.ArgumentTypeError(
-        r"The destination folder is not a directory.  Please pass a path that represents an existing folder.")
+        "The destination folder is not a directory.  " +
+        "Please pass a path that represents an existing folder.")
 
 
 def setup_argparse() -> argparse.ArgumentParser:
@@ -77,19 +81,30 @@ def setup_argparse() -> argparse.ArgumentParser:
     arguments = argparse.ArgumentParser(description=helptext)
     mugroup = arguments.add_mutually_exclusive_group()
 
-    mugroup.add_argument("--profile", "-p", help="A backup profile.  This is loaded " +
-                                                 "from the configuration file.  You will have to create a backup " +
-                                                 "profile before using this option.  It is recommended you do so through the UI.")
+    mugroup.add_argument(
+        "--profile",
+        "-p",
+        help="A backup profile.  This is loaded " +
+             "from the configuration file.  You will have to create a backup " +
+             "profile before using this option.  It is recommended you do so through the UI.""")
 
-    mugroup.add_argument("-l", "--list", help="Lists the backup profiles available to use.",
-                         action="store_true")
+    mugroup.add_argument(
+        "-l",
+        "--list",
+        help="Lists the backup profiles available to use.",
+        action="store_true")
 
-    mugroup.add_argument("--listerrortypes", "-e", help="List the types of errors that can be reported." +
-                                                        "  Use this to ignore certain types of errors.",
-                         action="store_true")
+    mugroup.add_argument(
+        "--listerrortypes",
+        "-e",
+        help="List the types of errors that can be reported." +
+             "  Use this to ignore certain types of errors.",
+        action="store_true")
 
-    arguments.add_argument("--loglevel", help="Set the log level for this run.  Levels are:" +
-                                              "\ncritical\nerror\nwarning\ninfo\ndebug")
+    arguments.add_argument(
+        "--loglevel",
+        help="Set the log level for this run.  Levels are:" +
+             "\ncritical\nerror\nwarning\ninfo\ndebug")
     return arguments
 
 
@@ -120,13 +135,13 @@ def gui(args: List[str] = None) -> int:
 
     PDATA.load()
     logger.info("[PROGRAM START]")
-    logger.debug("Configuration: " + repr(CONFIG))
-    logger.debug("ProgramData: " + str(PDATA))
+    logger.debug("Configuration: %s", repr(CONFIG))
+    logger.debug("ProgramData: %s", str(PDATA))
 
     returnvalue = -1
     try:
         returnvalue = display_gui(args)
-    except:  # noqa E722
+    except:  # pylint: disable=bare-except
         logging.getLogger().exception("CRITICAL EXCEPTION")
     return returnvalue
 
