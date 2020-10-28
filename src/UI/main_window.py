@@ -14,11 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 import logging
+from typing import List
 from PyQt5.QtWidgets import QMainWindow, QShortcut, QMessageBox, QPlainTextEdit
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QApplication
 from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
-from PyQt5.QtGui import QFont, QKeySequence
+from PyQt5.QtGui import QFont, QKeySequence, QCloseEvent
 
 from UI.main_window_widgets import ManageBackupsWidget, EditConfigurationWidget, ExecuteBackupWidget
 from globaldata import CONFIG, VERSION
@@ -28,11 +30,11 @@ logger = logging.getLogger(__name__)
 class MainWindow(QMainWindow):
     def __init__(self, parent: QWidget):
         logger.info("Initializing MainWindow")
-        super(parent)
+        super().__init__(parent)
         self.statusBar().setEnabled(True)
         self._add_menubar()
         
-        self.setCentralWidget(ManageBackupsWidget(self))
+        self.set_central_widget(ManageBackupsWidget(self))
         self._apply_configuration()
         self.log_shortcut = QShortcut(QKeySequence("Ctrl+L"), self)
         self.log_shortcut.activated.connect(self._show_log_window)
@@ -54,7 +56,17 @@ class MainWindow(QMainWindow):
         logger.debug("Ctrl+L pressed")
         self.logwindow.show()
 
-    def close_event(self, event):
+    def closeEvent(self, event : QCloseEvent) -> None: # pylint: disable=unused-argument,invalid-name
+        """ closeEvent(event : QCloseEvent) -> None
+
+        Overrides QMainWindow.closeEvent, defining actions
+        to be taken on the window's close.
+
+        Parameters:
+        -----------
+        event : QCloseEvent
+            The event... I think that triggers the close.
+        """
         logger.debug("MainWindow closed.")
         self.logwindow.allowclose = True
         self.logwindow.close()
@@ -66,7 +78,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def _edit_config(self):
         if type(self.centralWidget()) is not ExecuteBackupWidget:
-            self.setCentralWidget(EditConfigurationWidget(self))
+            self.set_central_widget(EditConfigurationWidget(self))
         else:
             QMessageBox.warning(self, "Backup Running!", 
                 "You currently have a backup running... Please " + 
@@ -86,7 +98,7 @@ class MainWindow(QMainWindow):
         
         Version: """ + str(VERSION))
 
-    def setCentralWidget(self, new_widget: QWidget) -> None:
+    def set_central_widget(self, new_widget: QWidget) -> None:
         logger.debug("setCentralWidget overrided")
         self.configbutton.setEnabled(type(new_widget) is ManageBackupsWidget)
 
@@ -114,7 +126,7 @@ class LogWindow(QWidget):
         logging.getLogger().addHandler(self.log_handler)
         self.setWindowTitle("LOGS")
         self.allowclose = False
-    
+
     def _layout(self):
         mainlayout = QVBoxLayout()
 
@@ -129,17 +141,19 @@ class LogWindow(QWidget):
         uiconfig = CONFIG.config['ui']
 
         self.setFont(QFont(str(uiconfig['font']), int(uiconfig['font_size'])))
-    
+
     def _connect(self):
         self.log_handler.qcom.LOGTOWINDOW.connect(self._log_to_window)
-    
-    def close_event(self, event):
+
+    def closeEvent(self, event: QCloseEvent) -> None: # pylint: disable=unused-argument,invalid-name
+        """ closeEvent(event : QCloseEvent) -> None
+        """
         if self.allowclose:
-            logger.debug(self.close_event.__qualname__ + ": closing log window")
+            logger.debug("%s: closing log window", self.closeEvent.__qualname__)
             logging.getLogger().removeHandler(self.log_handler)
             self.close()
         else:
-            logger.debug(self.close_event.__qualname__ + ": hiding log window")
+            logger.debug("%s: hiding log window", self.closeEvent.__qualname__)
             self.hide()
 
     @pyqtSlot(str)
@@ -166,20 +180,41 @@ class LogWindow(QWidget):
             self.log_output.setPlainText(self.log_output.toPlainText()[(length - minsize):length])
 
     class WindowLogHandler(logging.Handler):
+        """ WindowLogHandler(logging.Handle)
+
+        This log handler writes logs to a window.
+        """
+
         class QComObject(QObject):
+            """ A proxy object
+            """
             LOGTOWINDOW = pyqtSignal(str)
 
         def __init__(self, window):
             super(LogWindow.WindowLogHandler, self).__init__()
             self.window = window
-            self.setFormatter(logging.Formatter("%(asctime)s [%(name)s] [%(levelname)s] -> %(message)s"))
+            f = "%(asctime)s [%(name)s] [%(levelname)s] -> %(message)s"
+            self.setFormatter(logging.Formatter(f))
             self.qcom = LogWindow.WindowLogHandler.QComObject()
 
         def emit(self, record):
             self.qcom.LOGTOWINDOW.emit(self.format(record))
 
-def display_gui(argv):
-    logger.debug("display_gui called with args: " + str(argv))
+def display_gui(argv : List[str]):
+    """ display_gui(argv: List[str]) -> int
+
+    Display's the program's GUI using PyQt5.
+
+    Parameters:
+    -----------
+    argv: List[str]
+        The arguments passed to the program.
+
+    Returns:
+    --------
+    int: 0 for normal termination.
+    """
+    logger.debug("display_gui called with args: %s", str(argv))
     app = QApplication(argv)
-    window = MainWindow(None) # noqa F841
+    window = MainWindow(None) # pylint: disable=unused-variable
     return app.exec()
