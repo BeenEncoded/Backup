@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 import os
 import shutil
 import typing
@@ -22,6 +23,8 @@ import logging
 import enum
 import re
 import sys
+import io
+from typing import Tuple
 
 logger = logging.getLogger("filesystem.iterator")
 
@@ -290,7 +293,8 @@ class recursivecopy:
         # open the source file
         ophandle, opsuccess, opresult = self._open_file(source, 'rb')
         sourcefile = None
-        if not opsuccess: return [opresult]
+        if not opsuccess:
+            return [opresult]
         sourcefile = ophandle
 
         #Open all the destination files.
@@ -299,24 +303,26 @@ class recursivecopy:
             try:
                 dhandle, dsuccess, dresult = self._open_file(dest, 'wb')
                 dest_files.append(tuple(((dhandle if dsuccess else None), (None if dsuccess else dresult), dest)))
-                if dsuccess: do_continue = True #set the write loop to run if we have a handle to write to
-            except: # noqa E722
+                if dsuccess:
+                    do_continue = True #set the write loop to run if we have a handle to write to
+            except:
                 for d,_,_ in dest_files:
-                    if d is not None: d.close()
+                    if d is not None:
+                        d.close()
                 sourcefile.close()
                 raise
-        
+
         #dest_files -> [tuple(fileHandle, error, pathstring)]
 
         # perform the writing operation.
         haveread = False
-        logger.debug(f"Copying [\"{source}\"] -> {str(destinations)}")
+        logger.debug("Copying [\"%s\"] -> %s", source, destinations)
 
         sourcesize = os.stat(source).st_size
         read_blocksize = ((2**20) * 10) # 10 megabytes
-        if(sourcesize > (2**30)): #greater than 1GB
+        if sourcesize > (2**30): #greater than 1GB
             logger.warning("Largefile, will take some time.")
-        
+
         while do_continue:
             # read once from the source, and write that data to each destination stream.
             # this should ease the stress of the operation on the source drive.
@@ -326,17 +332,21 @@ class recursivecopy:
                 if rerror is not None:
                     logger.error("READ ERROR OCCURRED!")
                     for d,_,_ in dest_files:
-                        if d is not None: d.close() #sourcefile is already closed by _read_file
+                        if d is not None:
+                            d.close() #sourcefile is already closed by _read_file
 
                     #return the error(s).  We can't do anything now.
                     return ([error for _,error,_ in dest_files if error is not None] + [rerror])
 
-                if rateof: break
-                if not haveread: haveread = True
+                if rateof:
+                    break
+                if not haveread:
+                    haveread = True
             except: # noqa E722
                 #the sourcefile will be closed if an exception is raised from _read_file
                 for d,_,_ in dest_files:
-                    if d is not None: d.close()
+                    if d is not None:
+                        d.close()
                 raise
 
             # Attempt to write the read data to each target destination:
@@ -351,25 +361,28 @@ class recursivecopy:
                                 dest[0].close()
                         except: # noqa E722
                             for d,_,_ in dest_files:
-                                if d is not None: d.close()
+                                if d is not None:
+                                    d.close()
                             sourcefile.close()
                             raise
-            
+
             #if we have a large file, log the progress
             if (sourcesize > 2**30) and ((int((sourcefile.tell() / sourcesize) * 100) % 10) == 0):
                 logger.warning("Largefile copy: %" + str((sourcefile.tell() / sourcesize) * 100))
-            
+
             # if for any reason all our destination streams were closed, 
             # we need to break out of the write operation and halt the process.
             do_continue = False
             for handle ,error,_ in dest_files:
                 if error is None and handle is not None:
-                    if not handle.closed: do_continue = True
+                    if not handle.closed:
+                        do_continue = True
 
         # the write operations are complete.  Close all the destination
         # streams:
         for dest in dest_files:
-            if dest[0] is not None: dest[0].close()
+            if dest[0] is not None:
+                dest[0].close()
 
         sourcefile.close()
 
@@ -443,7 +456,7 @@ class recursivecopy:
         #return the results if there was a problem, otherwise just return None
         return results
 
-    def _open_file(self, path: str, access: str='wrb') -> tuple:
+    def _open_file(self, path: str, access: str='wrb') -> Tuple[io.IOBase, bool, recursivecopy.UnexpectedError]:
         '''
         ### _open_file(self, path: str, access: str='wrb') -> tuple
             :param path: a fully qualified path to open.
@@ -490,7 +503,7 @@ class recursivecopy:
                 handle = None
         return handle, success, result
 
-    def _read_file(self, filehandle, blocksize:int = -1):
+    def _read_file(self, filehandle: io.BytesIO=None, blocksize:int = -1):
         '''
         ### _read_file(self, filehandle: HANDLE, blocksize: int = -1)
         Reads a block from the file.  File must have been open with 'rb'.
@@ -498,9 +511,11 @@ class recursivecopy:
             :param filehandle: the handle to read
             :param blocksize:  the number of bytes to read from the file.  if unspecified
                                reads the entire file.
-            
+
             :returns (bool, bytes, error): true if the file is at end.  The bytes read.  An error if there was one, or None.
         '''
+        if filehandle is None:
+            raise Exception(f"{recursivecopy._read_file.__qualname__}: filehandle is none!")
         success = False
 
         ateof = False
@@ -513,14 +528,30 @@ class recursivecopy:
             logger.exception()
             error = recursivecopy.AccessDeniedError(f"Permission error encountered while reading from source \"{self.current}\"", e, self.current)
             return ateof, data, error
+        except OSError as e:
+            if current_os() is OsType.WINDOWS:
+                if e.errno == 22 and e.strerror == "Invalid argument":
+                    logger.warning(
+                        "Attempted to read a file that is probably%s",
+                        " in the cloud on windows.  Run OneDrive to fix this.")
+                    error = recursivecopy.CantOpenFileError("Attempted to read a file that is probably " +
+                        "in the cloud on windows.  Run OneDrive to fix this.", e)
+                    return ateof, data, error
+            logger.exception("Operating System Error... This should not happen!")
+            raise
         except: # noqa E722
-            #we should have caught everything, but in case we havn't, we 
+            #we should have caught everything, but in case we havn't, we
             #need to know about it.  Log it and pass the exception on.
-            logger.exception(f"\n\n\nUNHANDLED EXCEPTION: {recursivecopy._read_file.__qualname__}\n\n\n")
+            logger.exception(
+                "\n\n\nUNHANDLED EXCEPTION: %s\nblocksize=%i\ndata:%s\n\n\n",
+                recursivecopy._read_file.__qualname__,
+                blocksize,
+                data)
             raise
         finally:
-            if not success and filehandle is not None: filehandle.close()
-        
+            if not success and filehandle is not None:
+                filehandle.close()
+
         ateof = (len(data) == 0)
         return ateof, data, error
 
@@ -733,8 +764,11 @@ class recursivecopy:
             self.filename = filename
 
         def __str__(self):
-            return (f"[{recursivecopy.CantOpenFileError.__name__}] Exception: " + 
+            temps = (f"[{recursivecopy.CantOpenFileError.__name__}] Exception: " +
                 f"{str(self.exception)}{os.linesep}File: {self.filename}")
+            if self.message is not None and len(self.message) > 0:
+                temps += f"{os.linesep}Message: {self.message}"
+            return temps
 
     class NothingWasDoneError(UnexpectedError):
         def __init__(self, message: str = None, exception: Exception = None):
