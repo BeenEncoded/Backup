@@ -187,15 +187,15 @@ class BackupThread(threading.Thread):
         super(BackupThread, self).__init__()
         self.backup = backup
         self.algo = Backup(backup, 
-            {"progressupdate": self.updateProgress, 
-            "reporterror": self.showError, 
+            {"progressupdate": self.updateProgress,
+            "reporterror": self.showError,
             "finished": self.raiseFinished})
         self.qcom = BackupThread.QtComObject()
 
     def run(self):
         logger.debug("BackupThread starting to run.")
         self.algo.execute()
-    
+
     def cancelExec(self) -> None:
         self.algo.abort = True
 

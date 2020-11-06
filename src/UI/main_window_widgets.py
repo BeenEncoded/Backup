@@ -46,7 +46,7 @@ def add_to_list(ob, src):
             if entry not in ob:
                 ob.append(entry)
 
-class EditBackupProfileWidget(QWidget):
+class EditBackupProfileWidget(QWidget): # pylint: disable=too-few-public-methods
     '''
     EditBackupProfileWidget:
         Edits a backup profile.
@@ -71,7 +71,7 @@ class EditBackupProfileWidget(QWidget):
         self._apply_profile_to_fields()
         self._connect_handlers()
         self._set_enabled_buttons()
-    
+
     def _init_layout(self):
         self.parent().setWindowTitle("Edit Backup")
         mainlayout = QVBoxLayout()
@@ -103,7 +103,7 @@ class EditBackupProfileWidget(QWidget):
         mainlayout.addLayout(finalbuttons_layout)
 
         self.setLayout(mainlayout)
-    
+
     def _apply_profile_to_fields(self):
         self.name_tbox.setText(self._profile.name)
 
@@ -132,7 +132,7 @@ class EditBackupProfileWidget(QWidget):
                     break
         else:
             self.parent().setCentralWidget(ManageBackupsWidget(self.parent()))
-    
+
     @pyqtSlot()
     def _finish_editing_profile(self):
         global PDATA
@@ -162,7 +162,7 @@ class EditBackupProfileWidget(QWidget):
 
 
 class EditConfigurationWidget(QWidget):
-    _loglevels = {
+    _LOGLEVELS = {
             "critical": logging.CRITICAL,
             "error":    logging.ERROR,
             "warning":  logging.WARNING,
@@ -190,7 +190,7 @@ class EditConfigurationWidget(QWidget):
         settinggroup = QGroupBox("Settings")
         gboxlayout = QVBoxLayout()
         self.loglevel_box = QComboBox()
-        self.loglevel_box.addItems(EditConfigurationWidget._loglevels.keys())
+        self.loglevel_box.addItems(EditConfigurationWidget._LOGLEVELS.keys())
         self.loglevel_box.setToolTip("While debug will show the most information, it " + 
             "can have a large performance impact.  Warning is the recommended level.")
         gboxlayout.addLayout(self._hlayout(QLabel("Log Level: "), self.loglevel_box))
@@ -252,7 +252,7 @@ class EditConfigurationWidget(QWidget):
     def _apply_changes(self) -> None:
         global CONFIG
         CONFIG["DEFAULT"]["loglevel"] = self.loglevel_box.currentText()
-        logging.getLogger().setLevel(EditConfigurationWidget._loglevels[CONFIG["DEFAULT"]["loglevel"]])
+        logging.getLogger().setLevel(EditConfigurationWidget._LOGLEVELS[CONFIG["DEFAULT"]["loglevel"]])
         if self.newfont is not None:
             CONFIG['ui']['font'] = self.newfont.family()
             CONFIG['ui']['font_size'] = str(self.newfont.pointSize())
@@ -282,7 +282,7 @@ class EditPathListWidget(QWidget):
         self._layout()
         self._handlers()
         self._applyfields()
-    
+
     def _layout(self) -> None:
         self.mainlayout = QVBoxLayout()
 
@@ -357,9 +357,10 @@ class EditPathListWidget(QWidget):
                 self._data[self.listbox.currentRow()] = self.directorytextbox.text()
                 self._applyfields()
             else:
-                row = self.listbox.currentRow() # noqa: F841
-                size = len(self._data) # noqa: F841
-                logger.error("listbox.currentRow >= len(self._data)!!  Currentrow: {row} size of _data (pathlist): {size}")
+                logger.error(
+                    "listbox.currentRow >= len(self._data)!!  Currentrow: %i size of _data (pathlist): %i", # pylint: disable=line-too-long
+                    self.listbox.currentRow(),
+                    len(self._data))
         else:
             logger.warning("{EditPathListWidget._apply_edit.__qualname__}: called with nothing selected in the list!!  WHY?!?!?!")
 
@@ -367,34 +368,40 @@ class EditPathListWidget(QWidget):
     def _editdirectory(self, text: str="") -> None:
         if len(self.listbox.selectedItems()) > 0:
             if self.listbox.currentRow() < len(self._data):
-                self.entertextbutton.setEnabled(self.directorytextbox.text() != self._data[self.listbox.currentRow()])
+                self.entertextbutton.setEnabled(
+                    self.directorytextbox.text() != self._data[self.listbox.currentRow()])
             else:
-                row = self.listbox.currentRow() # noqa: F841
-                size = len(self._data) # noqa: F841
-                logger.error("listbox.currentRow >= len(self._data)!!  Currentrow: {row} size of _data (pathlist): {size}")
+                logger.error(
+                    "listbox.currentRow >= len(self._data)!!  Currentrow: %i size of _data (pathlist): %i", # pylint: disable=line-too-long
+                    self.listbox.currentRow(),
+                    len(self._data))
         else:
-            logger.warning("{EditPathListWidget._editdirectory.__qualname__}: called with nothing selected in the list!!  WHY?!?!?!")
+            logger.warning(
+                "%s: called with nothing selected in the list!!  WHY?!?!?!",
+                EditPathListWidget._editdirectory.__qualname__)
 
     @pyqtSlot()
     def _add_paths(self):
         add_to_list(self._data, self._directory_dialog(self.listname))
         self._applyfields()
-    
+
     @pyqtSlot()
     def _remove_selected_path(self) -> None:
         if len(self.listbox.selectedItems()) > 0:
             index = self.listbox.currentRow()
             if len(self._data) > 0 and (index < len(self._data)):
                 self._data.pop(index)
-                logger.debug("Removed item at position " + str(index))
+                logger.debug("Removed item at position %i", index)
             else:
                 #printing relevant errors... this should not happen, but just in case
                 #we will want to know what happened.
                 if len(self._data) <= 0:
                     logger.error("Failed to remove item: pathlist is empty!")
                 elif index >= len(self._data):
-                    logger.error("Failed to remove item: index " + str(index) + 
-                        " is greater than the size of the pathlist (" + str(len(self._data)) + ")")
+                    logger.error(
+                        "Failed to remove item: index %i is greater than the size of the pathlist %i", # pylint: disable=line-too-long
+                        index,
+                        len(self._data))
             #now that the element was removed, we update the ui to
             #reflect the changes.
             self._applyfields()
@@ -650,14 +657,14 @@ class QBackupExecution(QWidget):
         if backup is None:
             backup = {"source": "", "destinations": [], "newdest": None}
 
-        logger.info("instantiating new QBackupExecution: " + str(backup))
+        logger.info("instantiating new QBackupExecution: %s", backup)
         self.complete = False
         self.threadmanager = manager
         self.backupthread = BackupThread(backup)
 
         self._init_layout()
         self._connect_handlers()
-    
+
     def _init_layout(self):
         mainlayout = QVBoxLayout()
         
@@ -672,7 +679,7 @@ class QBackupExecution(QWidget):
         mainlayout.addWidget(self.groupbox)
         
         self.setLayout(mainlayout)
-    
+
     def _connect_handlers(self):
         if not hasattr(self.backupthread, "qcom"):
             self.backupthread.qcom = BackupThread.QtComObject()
@@ -692,7 +699,7 @@ class QBackupExecution(QWidget):
     def _update_progress(self, status):
         self.progressbar.setValue(status.percent)
         self.currentop_label.setText(status.message)
-    
+
     @pyqtSlot()
     def _backup_finished(self):
         self.complete = True
@@ -708,7 +715,7 @@ class QPruneBackupExecution(QWidget):
 
         self._layout()
         self._connect_handlers()
-    
+
     def __del__(self):
         if self.prunethread is not None:
             if self.prunethread.isAlive():
@@ -729,7 +736,7 @@ class QPruneBackupExecution(QWidget):
         mainlayout = QVBoxLayout()
         mainlayout.addWidget(groupbox)
         self.setLayout(mainlayout)
-    
+
     def _connect_handlers(self) -> None:
         self.prunethread.statusUpdated.connect(self.update_progress)
         self.prunethread.finished.connect(self.complete_operation)
@@ -749,4 +756,4 @@ class QPruneBackupExecution(QWidget):
     def complete_operation(self) -> None:
         logger.debug(f"{QPruneBackupExecution.complete_operation.__qualname__}: called -> raisining the pruneCompleted signal!")
         self.pruneCompleted.emit()
-    
+
