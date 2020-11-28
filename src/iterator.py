@@ -486,12 +486,12 @@ class recursivecopy:
             else: #for mac and linux, we simply revert to reporting the error (they don't have path-length limits):
                 logger.exception(f"{recursivecopy._open_file.__qualname__}")
                 result = recursivecopy.UnexpectedError(f"File not found. (\"{path}\")", e)
-        except OSError as e:
-            logger.exception(f"{recursivecopy._open_file.__qualname__}")
-            result = recursivecopy.CantOpenFileError(f"Error on opening \"{path}\".", exception=e, filename=path)
         except PermissionError as e:
             logger.exception(f"{recursivecopy._open_file.__qualname__}")
             result = recursivecopy.AccessDeniedError(f"{recursivecopy._open_file.__qualname__}: Failed to open \"{path}\"!", e=e, path=path)
+        except OSError as e:
+            logger.exception(f"{recursivecopy._open_file.__qualname__}")
+            result = recursivecopy.CantOpenFileError(f"Error on opening \"{path}\".", exception=e, filename=path)
         except: # noqa E722
             #we should have caught everything, but in case we havn't, we 
             #need to know about it.  Log it and pass the exception on.
