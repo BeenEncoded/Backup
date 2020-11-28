@@ -36,8 +36,15 @@ from algorithms import ProcessStatus
 logger = logging.getLogger("UI.MainWindowWidgets")
 
 def add_to_list(ob, src):
-    '''
+    '''  add_to_list(ob : list[T], src : List[T])
     Adds objects in src to ob, but only if they do not exist in ob.
+
+    Parameters:
+    -----------
+    ob : List[T]
+        The list object to operate on.
+    src : List[T]
+        A list of objects to add to ob.
     '''
     if ob is not None and src is not None:
         if not isinstance(src, list):
