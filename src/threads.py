@@ -25,9 +25,9 @@ logger = logging.getLogger("threads")
 
 
 class Worker(threading.Thread):
-    '''
+    """
     An arbitrary worker thread.
-    '''
+    """
     def __init__(self, functor):
         '''
         functor: the function to execute on each iteration.  Takes no arguments.
@@ -43,10 +43,10 @@ class Worker(threading.Thread):
         self._functor = functor
     
     def halt_thread(self) -> None:
-        '''
+        """
         Stops this worker thread.
-        '''
         if not self.isAlive():
+        """
             return
         self._stopthread = True
         self.join()
