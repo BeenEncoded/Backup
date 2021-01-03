@@ -700,8 +700,8 @@ class QBackupExecution(QWidget):
         if self.backupthread.isAlive():
             logger.warning("Aborting backup in progress: " + str(self.backupthread.backup))
         self.backupthread.cancelExec()
-        #the thread should pass-through its run() method and die, then be picked
-        #up by the thread manager.
+        # the thread should pass-through its run() method and die, then be picked
+        # up by the thread manager.
 
     @pyqtSlot(ProcessStatus)
     def _update_progress(self, status):
