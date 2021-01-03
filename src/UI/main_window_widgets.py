@@ -697,7 +697,7 @@ class QBackupExecution(QWidget):
         self.threadmanager.addThread(self.backupthread)
 
     def stopExecution(self):
-        if self.backupthread.isAlive():
+        if self.backupthread.is_alive():
             logger.warning("Aborting backup in progress: " + str(self.backupthread.backup))
         self.backupthread.cancelExec()
         # the thread should pass-through its run() method and die, then be picked
@@ -726,7 +726,7 @@ class QPruneBackupExecution(QWidget):
 
     def __del__(self):
         if self.prunethread is not None:
-            if self.prunethread.isAlive():
+            if self.prunethread.is_alive():
                 self.prunethread.join()
             self.prunethread = None
 
