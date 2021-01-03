@@ -45,8 +45,8 @@ class Worker(threading.Thread):
     def halt_thread(self) -> None:
         """
         Stops this worker thread.
-        if not self.isAlive():
         """
+        if not self.is_alive():
             return
         self._stopthread = True
         self.join()
