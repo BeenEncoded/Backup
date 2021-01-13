@@ -646,9 +646,11 @@ class recursivecopy:
         return None
 
     def _make_parent_folders(self, path: str="") -> bool:
-        if len(path) == 0: return False
+        if len(path) == 0:
+            return False
 
-        if not os.path.isabs(path): path = os.path.abspath(path)
+        if not os.path.isabs(path):
+            path = os.path.abspath(path)
         folder = os.path.dirname(path)
 
         if not os.path.isdir(folder):
@@ -656,6 +658,9 @@ class recursivecopy:
                 os.makedirs(folder)
             except FileExistsError:
                 return True
+            except OSError:
+                logger.exception("%s: Error creating parent folders.", recursivecopy._make_parent_folders.__qualname__)
+                return False
         
         return os.path.isdir(folder)
 
